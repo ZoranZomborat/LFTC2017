@@ -1,0 +1,1 @@
+dot -Tpdf transdiag.dot -o graph.pdf
