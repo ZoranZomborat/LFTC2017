@@ -1,2 +1,9 @@
-int a; a=10;
-printf("a=%d",a);
+/*ddsds
+dsds
+*/
+int main (){ //test
+	char c='\\'; //fdfjsdfsd
+	/*ddsds*/
+	printf("%c,%d",c,108); 
+}
+//dsadasd
