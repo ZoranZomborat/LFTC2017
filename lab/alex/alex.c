@@ -36,6 +36,7 @@ Token *addTk(int code, int line) {
     tk->code = code;
     tk->line = line;
     tk->next = NULL;
+    tk->infoType=TK_NONE;
     if (lastToken) {
         lastToken->next = tk;
     } else {
@@ -44,6 +45,7 @@ Token *addTk(int code, int line) {
     lastToken = tk;
     return tk;
 }
+
 
 char * createString(const char *start, char * curr) {
     char *s;
@@ -54,10 +56,55 @@ char * createString(const char *start, char * curr) {
     return s;
 }
 
+void addTokenInfo(Token *tk, char * str, tokenInfoType type)
+{
+    if(tk==NULL)
+        err("Null pointer to token");
+    switch(type){
+    case TK_STRING:
+        tk->info.text = str;
+        break;
+    case TK_INT:
+        tk->info.intnum = strtol(str, NULL, 0);
+        break;
+    case TK_FLOAT:
+        tk->info.floatnum = strtof(str, NULL);
+        break;
+    default:
+        err("Invalid token type");
+        break;
+    }
+    tk->infoType=type;
+}
+
+void listToken(Token *tk)
+{
+    fprintf(stdout,"%s:\t",atomNames[tk->code]);
+    if(tk->infoType > 0)
+    {
+        switch(tk->infoType){
+           case TK_STRING:
+               fprintf(stdout,"%s",tk->info.text);
+               break;
+           case TK_INT:
+               fprintf(stdout,"%ld",tk->info.intnum);
+               break;
+           case TK_FLOAT:
+               fprintf(stdout,"%f",tk->info.floatnum);
+               break;
+           default:
+               err("Invalid token type");
+               break;
+        }
+    }
+    fprintf(stdout,"\n");
+}
+
 int getNextToken() {
     int state = 0, nCh, i;
     char ch;
     const char *pStartCh;
+    char *s;
     Token *tk;
     while (1) { // bucla infinita
         ch = *pCrtCh;
@@ -81,12 +128,12 @@ int getNextToken() {
             else if (ch == '\''){
                 pStartCh = pCrtCh; // memoreaza inceputul charului
                 pCrtCh++;
-                state = 21;
+                state = 18;
             }
             else if (ch == '"'){
                 pStartCh = pCrtCh; // memoreaza inceputul stringului
                 pCrtCh++;
-                state = 19;
+                state = 22;
             }
             else if (ch == ',')
             {
@@ -222,8 +269,8 @@ int getNextToken() {
             else
             {
                 tk = addTk(CT_INT, line);
-                char * s=createString(pStartCh,pCrtCh);
-                tk->intnum = strtol(s, NULL, 0);
+                s = createString(pStartCh, pCrtCh);
+                addTokenInfo(tk, s, TK_INT);
                 return tk->code;
             }
             break;
@@ -256,8 +303,8 @@ int getNextToken() {
             else
             {
                 tk = addTk(CT_INT, line);
-                char * s=createString(pStartCh,pCrtCh);
-                tk->intnum = strtol(s, NULL, 0);
+                s=createString(pStartCh,pCrtCh);
+                addTokenInfo(tk, s, TK_INT);
                 return tk->code;
             }
             break;
@@ -279,8 +326,8 @@ int getNextToken() {
             else
             {
                 tk = addTk(CT_INT, line);
-                char * s=createString(pStartCh,pCrtCh);
-                tk->intnum = strtol(s, NULL, 0);
+                s=createString(pStartCh,pCrtCh);
+                addTokenInfo(tk, s, TK_INT);
                 return tk->code;
             }
             break;
@@ -298,8 +345,8 @@ int getNextToken() {
             else
             {
                 tk = addTk(CT_INT, line);
-                char * s = createString(pStartCh,pCrtCh);
-                tk->intnum = strtol(s, NULL, 0);
+                s = createString(pStartCh,pCrtCh);
+                addTokenInfo(tk, s, TK_INT);
                 return tk->code;
             }
             break;
@@ -349,8 +396,10 @@ int getNextToken() {
             }
             else
             {
-                char * s=createString(pStartCh,pCrtCh);
-                addTk(CT_REAL, line);
+                tk = addTk(CT_REAL, line);
+                s=createString(pStartCh,pCrtCh);
+                addTokenInfo(tk, s, TK_FLOAT);
+                return tk->code;
             }
             break;
         case 11:
@@ -379,8 +428,10 @@ int getNextToken() {
             }
             else
             {
-                char * s=createString(pStartCh,pCrtCh);
-                addTk(CT_REAL, line);
+                tk = addTk(CT_REAL, line);
+                s=createString(pStartCh,pCrtCh);
+                addTokenInfo(tk, s, TK_FLOAT);
+                return tk->code;
             }
             break;
         case 16:
@@ -402,8 +453,73 @@ int getNextToken() {
                 }
             }
             tk = addTk(ID, line);
-            tk->text = createString(pStartCh, pCrtCh);
+            s = createString(pStartCh, pCrtCh);
+            addTokenInfo(tk, s, TK_STRING);
             return tk->code;
+            break ;
+        case 18:
+            if(ch == '\\'){
+                pCrtCh++;
+                state=19;
+            }else if(ch != '\''){
+                pCrtCh++;
+                state=20;
+            } else
+                pCrtCh++;
+                state=21;
+            break;
+        case 19:
+            if(strchr("abfnrtv'?\"\\0", ch)!=NULL){
+                pCrtCh++;
+                state=20;
+            }else
+                err("error at line ", line, " state " ,state);
+            break;
+        case 20:
+            if(ch == '\''){
+                pCrtCh++;
+                state=20;
+            }else
+                err("error at line ", line, " state " ,state);
+            break;
+        case 21:
+            tk = addTk(CT_CHAR, line);
+            s = createString(pStartCh, pCrtCh);
+            addTokenInfo(tk, s, TK_INT);
+            return tk->code;
+            break;
+        case 22:
+            if (ch == '\\') {
+                pCrtCh++;
+                state = 23;
+            } else if (ch != '"') {
+                pCrtCh++;
+                state = 22;
+            } else {
+                pCrtCh++;
+                state = 25;
+            }
+            break;
+        case 23:
+            if (strchr("abfnrtv'?\"\\0", ch) != NULL) {
+                pCrtCh++;
+                state = 24;
+            } else
+                err("error at line ", line, " state ", state);
+            break;
+        case 24:
+            if (ch == '"') {
+                pCrtCh++;
+                state = 25;
+            } else
+                state=22;
+            break;
+        case 25:
+            tk = addTk(CT_CHAR, line);
+            s = createString(pStartCh, pCrtCh);
+            addTokenInfo(tk, s, TK_STRING);
+            return tk->code;
+            break;
         default:
             err("wrong untreated state : ",state);
             break;
@@ -413,6 +529,7 @@ int getNextToken() {
 }
 
 int main(int argc, char * argv[]) {
+    Token *tk;
     int nc;
     int fd;
     int tkcode;
@@ -431,9 +548,15 @@ int main(int argc, char * argv[]) {
     }
 
     pCrtCh=buff;
-    while((tkcode=getNextToken())!=END)
-    {
-        printf("%s\n",atomNames[tkcode]);
+    while((tkcode=getNextToken())!=END){};
+
+    if (tokens != NULL) {
+        tk = tokens;
+        listToken(tk);
+        while (tk->next != NULL) {
+            tk = tk->next;
+            listToken(tk);
+        }
     }
 
     return 0;
