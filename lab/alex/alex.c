@@ -19,7 +19,8 @@ static char buff[BUFFSIZE];
 static Token *lastToken, *tokens;
 static int line = 0;
 static char * pCrtCh;
-static char * satomList = ",;()[]{}+-*";
+static char * satomList = ",;()[]{}+-*.";
+static int tokenLine=0;
 
 void err(const char *fmt, ...) {
     va_list va;
@@ -47,6 +48,67 @@ Token *addTk(int code, int line) {
     return tk;
 }
 
+char *toLiteral(char *s)
+{
+    char *lit;
+    int i, j=0, len=strlen(s);
+    lit=(char *)malloc(strlen(s));
+    for(i=0;i<len;i++)
+    {
+        if(s[i]!='\\')
+        {
+            lit[j]=s[i];
+            j++;
+        } else
+        {
+            i++;
+            switch(s[i]){ //abfnrtv'?\"\\0
+            case 'a':
+                lit[j]='\a';
+                break;
+            case 'b':
+                lit[j] = '\b';
+                break;
+            case 'f':
+                lit[j] = '\f';
+                break;
+            case 'n':
+                lit[j] = '\n';
+                break;
+            case 'r':
+                lit[j] = '\r';
+                break;
+            case 't':
+                lit[j] = '\t';
+                break;
+            case 'v':
+                lit[j] = '\v';
+                break;
+            case '\\':
+                lit[j] = '\\';
+                break;
+            case '\'':
+                lit[j] = '\'';
+                break;
+            case '"':
+                lit[j] = '\"';
+                break;
+            case '?':
+                lit[j] = '\?';
+                break;
+            case '0':
+                lit[j] = '\0';
+                break;
+            default :
+                err("error at literal conversion");
+                break;
+            }
+            j++;
+        }
+    }
+    lit[j]='\0';
+    return lit;
+}
 
 char * createString(const char *start, char * curr) {
     char *s;
@@ -54,6 +116,7 @@ char * createString(const char *start, char * curr) {
     SAFEALLOCSZ(s, char, size); //allocate also for NULL terminator
     memcpy(s, start, size);
     s[size - 1]='\0';
+    s=toLiteral(s);
     return s;
 }
 
@@ -99,6 +162,34 @@ void listToken(Token *tk)
         }
     }
     fprintf(stdout,"\n");
+}
+
+void listTokenPerLines(Token *tk)
+{
+    if(tokenLine<tk->line){
+        fprintf(stdout,"\n");
+        tokenLine=tk->line;
+    }
+    fprintf(stdout,"%s",atomNames[tk->code]);
+    if(tk->infoType > 0)
+    {
+        switch(tk->infoType){
+           case TK_STRING:
+               fprintf(stdout,":[%s]",tk->info.text);
+               break;
+           case TK_INT:
+               fprintf(stdout,":[%ld]",tk->info.intnum);
+               break;
+           case TK_FLOAT:
+               fprintf(stdout,":[%f]",tk->info.floatnum);
+               break;
+           default:
+               err("Invalid token type");
+               break;
+        }
+    }
+
+    fprintf(stdout," ");
 }
 
 int getNextToken() {
@@ -221,7 +312,7 @@ int getNextToken() {
                 pCrtCh++;
                 state = 7;
             }
-            else if (ch >= '0' || ch <= '7')
+            else if (ch >= '0' && ch <= '7')
             {
                 pCrtCh++;
                 state = 5;
@@ -584,17 +675,14 @@ int main(int argc, char * argv[]) {
     }
 
     pCrtCh=buff;
-    while((tkcode=getNextToken())!=END){
-        listToken(lastToken);
-    };
-    listToken(lastToken);
+    while((tkcode=getNextToken())!=END){};
 
     if (tokens != NULL) {
         tk = tokens;
-        //listToken(tk);
+        listTokenPerLines(tk);
         while (tk->next != NULL) {
             tk = tk->next;
-            //listToken(tk);
+            listTokenPerLines(tk);
         }
     }
 
