@@ -19,6 +19,7 @@ static char buff[BUFFSIZE];
 static Token *lastToken, *tokens;
 static int line = 0;
 static char * pCrtCh;
+static char * satomList = ",;()[]{}+-*";
 
 void err(const char *fmt, ...) {
     va_list va;
@@ -50,9 +51,9 @@ Token *addTk(int code, int line) {
 char * createString(const char *start, char * curr) {
     char *s;
     int size = (curr - start + 1);
-    SAFEALLOCSZ(s, char, size + 1);
+    SAFEALLOCSZ(s, char, size); //allocate also for NULL terminator
     memcpy(s, start, size);
-    s[size]='\0';
+    s[size - 1]='\0';
     return s;
 }
 
@@ -79,18 +80,18 @@ void addTokenInfo(Token *tk, char * str, tokenInfoType type)
 
 void listToken(Token *tk)
 {
-    fprintf(stdout,"%s:\t",atomNames[tk->code]);
+    fprintf(stdout,"%s",atomNames[tk->code]);
     if(tk->infoType > 0)
     {
         switch(tk->infoType){
            case TK_STRING:
-               fprintf(stdout,"%s",tk->info.text);
+               fprintf(stdout,":[%s]",tk->info.text);
                break;
            case TK_INT:
-               fprintf(stdout,"%ld",tk->info.intnum);
+               fprintf(stdout,":[%ld]",tk->info.intnum);
                break;
            case TK_FLOAT:
-               fprintf(stdout,"%f",tk->info.floatnum);
+               fprintf(stdout,":[%f]",tk->info.floatnum);
                break;
            default:
                err("Invalid token type");
@@ -104,7 +105,7 @@ int getNextToken() {
     int state = 0, nCh, i;
     char ch;
     const char *pStartCh;
-    char *s;
+    char *s, *pos;
     Token *tk;
     while (1) { // bucla infinita
         ch = *pCrtCh;
@@ -126,80 +127,31 @@ int getNextToken() {
                 state = 16;
             }
             else if (ch == '\''){
-                pStartCh = pCrtCh; // memoreaza inceputul charului
                 pCrtCh++;
+                pStartCh = pCrtCh; // memoreaza inceputul charului
                 state = 18;
             }
             else if (ch == '"'){
-                pStartCh = pCrtCh; // memoreaza inceputul stringului
                 pCrtCh++;
+                pStartCh = pCrtCh; // memoreaza inceputul stringului
                 state = 22;
             }
-            else if (ch == ',')
-            {
+            else if (ch == ' ' || ch == '\r' || ch == '\t') { //SPACE
                 pCrtCh++;
-                addTk(COMMA,line);
-                state=28;
             }
-            else if (ch == ';')
-            {
+            else if (ch == '\n') { // tratat separat pentru a actualiza linia curenta
+                line++;
                 pCrtCh++;
-                addTk(SEMICOL,line);
-                state = 29;
             }
-            else if (ch == '(')
-            {
-                pCrtCh++;
-                addTk(LPAR,line);
-                state = 30;
+            else if (ch == '\0') { // sfarsit de sir
+                addTk(END, line);
+                return END;
             }
-            else if (ch == ')')
+            else if ((pos=strchr(satomList,ch))!=NULL)
             {
                 pCrtCh++;
-                addTk(RPAR,line);
-                state = 31;
-            }
-            else if (ch == '[')
-            {
-                pCrtCh++;
-                addTk(LBRACK,line);
-                state = 32;
-            }
-            else if (ch == ']')
-            {
-                pCrtCh++;
-                addTk(RBRACK,line);
-                state = 33;
-            }
-            else if (ch == '{')
-            {
-                pCrtCh++;
-                addTk(LACC,line);
-                state = 34;
-            }
-            else if (ch == '}')
-            {
-                pCrtCh++;
-                addTk(RACC,line);
-                state = 35;
-            }
-            else if (ch == '+')
-            {
-                pCrtCh++;
-                addTk(ADD,line);
-                state = 36;
-            }
-            else if (ch == '-')
-            {
-                pCrtCh++;
-                addTk(SUB,line);
-                state = 37;
-            }
-            else if (ch == '*')
-            {
-                pCrtCh++;
-                addTk(MUL,line);
-                state = 38;
+                tk = addTk((FIRST_SATOM + (pos - satomList)), line);
+                return tk->code;
             }
             else if (ch == '/')
             {
@@ -235,17 +187,6 @@ int getNextToken() {
             else if (ch == '>') {
                 pCrtCh++;
                 state = 54;
-            }
-            else if (ch == ' ' || ch == '\r' || ch == '\t') { //SPACE
-                pCrtCh++;
-            }
-            else if (ch == '\n') { // tratat separat pentru a actualiza linia curenta
-                line++;
-                pCrtCh++;
-            }
-            else if (ch == '\0') { // sfarsit de sir
-                addTk(END, line);
-                return END;
             }
             else
                 err("caracter invalid");
@@ -446,10 +387,10 @@ int getNextToken() {
         case 17:
             nCh = pCrtCh - pStartCh; // lungimea cuvantului gasit
             for (i = FIRST_KEYW; i < LAST_KEYW; i++) {
-                int strSize = sizeof(atomNames[i]);
-                if (nCh == strSize && !memcmp(pStartCh, atomNames[i], strSize)){
+                int strSize = strlen(keyNames[i]);
+                if (nCh == strSize && !memcmp(pStartCh, keyNames[i], strSize)){
                     tk = addTk(i, line);
-                    break;
+                    return tk->code;
                 }
             }
             tk = addTk(ID, line);
@@ -464,9 +405,10 @@ int getNextToken() {
             }else if(ch != '\''){
                 pCrtCh++;
                 state=20;
-            } else
+            } else {
                 pCrtCh++;
                 state=21;
+            }
             break;
         case 19:
             if(strchr("abfnrtv'?\"\\0", ch)!=NULL){
@@ -477,16 +419,13 @@ int getNextToken() {
             break;
         case 20:
             if(ch == '\''){
+                tk = addTk(CT_CHAR, line);
+                s = createString(pStartCh, pCrtCh);
+                addTokenInfo(tk, s, TK_STRING);
                 pCrtCh++;
-                state=20;
+                return tk->code;
             }else
                 err("error at line ", line, " state " ,state);
-            break;
-        case 21:
-            tk = addTk(CT_CHAR, line);
-            s = createString(pStartCh, pCrtCh);
-            addTokenInfo(tk, s, TK_INT);
-            return tk->code;
             break;
         case 22:
             if (ch == '\\') {
@@ -496,7 +435,6 @@ int getNextToken() {
                 pCrtCh++;
                 state = 22;
             } else {
-                pCrtCh++;
                 state = 25;
             }
             break;
@@ -509,16 +447,114 @@ int getNextToken() {
             break;
         case 24:
             if (ch == '"') {
-                pCrtCh++;
                 state = 25;
             } else
                 state=22;
             break;
         case 25:
-            tk = addTk(CT_CHAR, line);
+            tk = addTk(CT_STRING, line);
             s = createString(pStartCh, pCrtCh);
             addTokenInfo(tk, s, TK_STRING);
+            pCrtCh++;
             return tk->code;
+            break;
+        case 39:
+            if(ch == '*' ){
+                pCrtCh++;
+                state = 60;
+            } else if( ch == '/'){
+                pCrtCh++;
+                state = 59;
+            } else {
+                tk = addTk(DIV, line);
+                return tk->code;
+            }
+            break;
+        case 59:
+            if(strchr("\n\r\t\0", ch)==NULL){
+                pCrtCh++;
+                state = 59;
+            } else {
+                pCrtCh++;
+                state = 0;
+            }
+            break;
+        case 60:
+            if(ch != '*'){
+                pCrtCh++;
+                state = 60;
+            } else {
+                pCrtCh++;
+                state = 61;
+            }
+            break;
+        case 61:
+            if(ch == '*'){
+                pCrtCh++;
+                state = 61;
+            } else if(ch != '*' && ch != '/'){
+                pCrtCh++;
+                state = 60;
+            } else {
+                pCrtCh++;
+                state = 0;
+            }
+            break;
+        case 41:
+            if(ch == '&'){
+                pCrtCh++;
+                tk = addTk(AND, line);
+                return tk->code;
+            } else
+                err("error at line ", line, " state " ,state);
+            break;
+        case 43:
+            if(ch == '|'){
+                pCrtCh++;
+                tk = addTk(OR, line);
+                return tk->code;
+            } else
+                err("error at line ", line, " state " ,state);
+            break;
+        case 45:
+            if(ch == '='){
+                pCrtCh++;
+                tk = addTk(NEQUAL, line);
+                return tk->code;
+            } else {
+                tk = addTk(NOT, line);
+                return tk->code;
+            }
+            break;
+        case 47:
+            if(ch == '='){
+                pCrtCh++;
+                tk = addTk(EQUAL, line);
+                return tk->code;
+            } else {
+                tk = addTk(ASSIGN, line);
+                return tk->code;
+            }
+            break;
+        case 51:
+            if(ch == '='){
+                pCrtCh++;
+                tk = addTk(LESSEQ, line);
+                return tk->code;
+            } else {
+                tk = addTk(LESS, line);
+                return tk->code;
+            }
+            break;
+        case 54:
+            if(ch == '='){
+                pCrtCh++;
+                tk = addTk(GRTEQ, line);
+                return tk->code;
+            } else {
+                tk = addTk(GRT, line);
+                return tk->code;
+            }
             break;
         default:
             err("wrong untreated state : ",state);
@@ -548,14 +584,17 @@ int main(int argc, char * argv[]) {
     }
 
     pCrtCh=buff;
-    while((tkcode=getNextToken())!=END){};
+    while((tkcode=getNextToken())!=END){
+        listToken(lastToken);
+    };
+    listToken(lastToken);
 
     if (tokens != NULL) {
         tk = tokens;
-        listToken(tk);
+        //listToken(tk);
         while (tk->next != NULL) {
             tk = tk->next;
-            listToken(tk);
+            //listToken(tk);
         }
     }
 

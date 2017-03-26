@@ -46,9 +46,13 @@ typedef enum{
     FIRST_ATOM  = BREAK ,
     LAST_ATOM   = END,
     FIRST_KEYW  = BREAK,
-    LAST_KEYW   = WHILE} atomType;
+    LAST_KEYW   = WHILE,
+    NUM_KEYW    = (LAST_KEYW - FIRST_KEYW + 1),
+    FIRST_SATOM = COMMA,
+    LAST_SATOM  = MUL,
+    NUM_SATOMS  = LAST_SATOM-FIRST_SATOM} atomType;
 
-char *atomNames[NUM_ATOMS]={
+char *keyNames[NUM_KEYW]={
         "break"     ,
         "char"      ,
         "double"    ,
@@ -59,7 +63,21 @@ char *atomNames[NUM_ATOMS]={
         "return"    ,
         "struct"    ,
         "void"      ,
-        "while"     ,
+        "while"
+};
+
+char *atomNames[NUM_ATOMS]={
+        "BREAK"     ,
+        "CHAR"      ,
+        "DOUBLE"    ,
+        "ELSE"      ,
+        "FOR"       ,
+        "IF"        ,
+        "INT"       ,
+        "RETURN"    ,
+        "STRUCT"    ,
+        "VOID"      ,
+        "WHILE"     ,
         "CT_INT"    ,
         "CT_REAL"   ,
         "ID"        ,
