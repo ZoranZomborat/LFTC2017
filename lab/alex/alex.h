@@ -1,3 +1,5 @@
+void err(const char *fmt, ...);
+
 typedef union TokenInfo{
         char *text; // folosit pentru ID, CT_STRING (alocat dinamic)
         long int intnum; // folosit pentru CT_INT, CT_CHAR
