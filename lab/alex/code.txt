@@ -1,0 +1,9 @@
+/*ddsds
+dsds
+*/
+int main (){ //test
+	char c='\\'; //fdfjsdfsd
+	/*ddsds*/
+	printf("%c,%d",c,108); 
+}
+//dsadasd
