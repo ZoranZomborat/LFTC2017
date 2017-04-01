@@ -1,6 +1,6 @@
 #include "../alex/alex.h"
 
-int consume(Token* ctk,int code);
+int consume(Token** ctk,int code);
 
 int ruleUnit(Token *tk);
 int declStruct(Token *tk);
