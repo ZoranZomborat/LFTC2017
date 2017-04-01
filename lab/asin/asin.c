@@ -1,16 +1,15 @@
 #include <stdlib.h>
 #include "asin.h"
 
-Token *consumedTk;
+static Token *consumedTk;
+static Token *crtTk;
 
-int consume(Token** pctk,int code)
+int consume(atomType code)
 {
-    Token *ctk=*pctk;
-    if(ctk->code==code)
+    if(crtTk->code==code)
     {
-        consumedTk=ctk;
-        ctk=ctk->next;
-        *pctk=ctk;
+        consumedTk=crtTk;
+        crtTk=crtTk->next;
         return 1;
     }
     return 0;
@@ -19,48 +18,48 @@ int consume(Token** pctk,int code)
 /*exprPrimary: ID ( LPAR ( expr ( COMMA expr )* )? RPAR )?
            | CT_INT | CT_REAL | CT_CHAR
            | CT_STRING | LPAR expr RPAR ;*/
-int exprPrimary(Token *ctk){
-    Token *tkStart = ctk;
+int exprPrimary(){
+    Token *tkStart = crtTk;
 
-    if(consume(&ctk, ID)){
-        if (consume(&ctk, LPAR)) {
-            if ( expr(ctk)){
-                while (consume(&ctk, COMMA) && expr(ctk)) {
+    if(consume(ID)){
+        if (consume(LPAR)) {
+            if ( expr()){
+                while (consume(COMMA) && expr()) {
                 };
             }
-            if (consume(&ctk, RPAR)) {
+            if (consume(RPAR)) {
                 return 1;
             } else{
                 err("err at exprPrimary missing ", atomNames[RPAR]);
             }
         }
         return 1;
-    } else if (consume(&ctk, CT_INT) || consume(&ctk, CT_REAL) ||
-            consume(&ctk, CT_CHAR) || consume(&ctk, CT_STRING)){
+    } else if (consume(CT_INT) || consume(CT_REAL) ||
+            consume(CT_CHAR) || consume(CT_STRING)){
         return 1;
-    } else if (consume(&ctk, LPAR) && expr(ctk) && consume(&ctk, RPAR)){
+    } else if (consume(LPAR) && expr() && consume(RPAR)){
         return 1;
     }
 
-    ctk = tkStart;
+    crtTk = tkStart;
     return 0;
 }
 
 
 /*exprPostfix: exprPostfix LBRACKET expr RBRACKET
            | exprPostfix DOT ID | exprPrimary ;*/
-int exprPostfix(Token *ctk){
-    Token *tkStart = ctk;
-    if(exprPrimary(ctk)){
+int exprPostfix(){
+    Token *tkStart = crtTk;
+    if(exprPrimary()){
         return 1;
-    } else if(exprPostfix(ctk)){
-        if(consume(&ctk, DOT)){
-            if(consume(&ctk ,ID)){
+    } else if(exprPostfix()){
+        if(consume(DOT)){
+            if(consume(ID)){
                 return 1;
             }
-        }else if(consume(&ctk, LBRACK)){
-            if(expr(ctk)){
-                if(consume(&ctk, RBRACK)){
+        }else if(consume(LBRACK)){
+            if(expr()){
+                if(consume(RBRACK)){
                     return 1;
                 }
             }
@@ -68,211 +67,213 @@ int exprPostfix(Token *ctk){
         else
             err("err at exprPostfix");
     }
-    ctk = tkStart;
+    crtTk = tkStart;
     return 0;
 }
 
 //typeName: typeBase arrayDecl?
-int typeName(Token *ctk)
+int typeName()
 {
-    Token *tkStart = ctk;
-    if (typeBase(ctk)) {
-        arrayDecl (ctk);
+    Token *tkStart = crtTk;
+    if (typeBase()) {
+        arrayDecl ();
         return 1;
     }
-    ctk = tkStart;
+    crtTk = tkStart;
     return 0;
 }
 
 //exprCast: LPAR typeName RPAR exprCast | exprUnary ;
-int exprCast(Token *ctk)
+int exprCast()
 {
-    Token *tkStart = ctk;
-    if(consume(&ctk, LPAR)){
-        if(typeName(ctk)){
-            if(consume(&ctk, RPAR)){
-                if(exprCast(ctk)){
+    Token *tkStart = crtTk;
+    if(consume(LPAR)){
+        if(typeName()){
+            if(consume(RPAR)){
+                if(exprCast()){
                     return 1;
                 }
             }
         }
-    } else if(exprUnary(ctk)){
+    } else if(exprUnary()){
         return 1;
     }
-    ctk = tkStart;
+    crtTk = tkStart;
     return 0;
 }
 
 //exprRel: exprRel ( LESS | LESSEQ | GREATER | GREATEREQ ) exprAdd | exprAdd ;
-int exprRel(Token * ctk)
+int exprRel()
 {
-    Token *tkStart = ctk;
-    if(exprAdd(ctk)){
+    Token *tkStart = crtTk;
+    if(exprAdd()){
         return 1;
-    } else if (exprRel(ctk)){
-        if( consume(&ctk, LESS) || consume(&ctk, LESSEQ)
-                || consume(&ctk, GRT) || consume(&ctk, GRTEQ)){
-            if(exprAdd(ctk)){
+    } else if (exprRel()){
+        if( consume(LESS) || consume(LESSEQ)
+                || consume(GRT) || consume(GRTEQ)){
+            if(exprAdd()){
                 return 1;
             }
         }
     }
-    ctk = tkStart;
+    crtTk = tkStart;
     return 0;
 }
 
 //exprAdd: exprAdd ( ADD | SUB ) exprMul | exprMul ;
-int exprAdd(Token *ctk)
+int exprAdd()
 {
-    Token *tkStart = ctk;
-    if (exprMul(ctk)){
+    Token *tkStart = crtTk;
+    if (exprMul()){
         return 1;
-    } else if (exprAdd(ctk))
+    } else if (exprAdd())
     {
-        if(consume(&ctk,ADD) || consume(&ctk,SUB)){
-            if (exprMul(ctk)){
+        if(consume(ADD) || consume(SUB)){
+            if (exprMul()){
                 return 1;
             }
         }
     }
-    ctk = tkStart;
+    crtTk = tkStart;
     return 0;
 }
 
 //exprMul: exprMul ( MUL | DIV ) exprCast | exprCast ;
-int exprMul(Token *ctk){
-    Token *tkStart = ctk;
-    if (exprCast(ctk)){
+int exprMul(){
+    Token *tkStart = crtTk;
+    if (exprCast()){
         return 1;
-    } else if (exprMul(ctk))
+    } else if (exprMul())
     {
-        if(consume(&ctk,MUL) || consume(&ctk,DIV)){
-            if (exprCast(ctk)){
+        if(consume(MUL) || consume(DIV)){
+            if (exprCast()){
                 return 1;
             }
         }
     }
-    ctk = tkStart;
+    crtTk = tkStart;
     return 0;
 }
 
 
 //exprEq: exprEq ( EQUAL | NOTEQ ) exprRel | exprRel ;
-int exprEq(Token *ctk){
-    Token *tkStart = ctk;
-    if(exprRel(ctk))
+int exprEq(){
+    Token *tkStart = crtTk;
+    if(exprRel())
     {
         return 1;
     }
-    else if (exprEq(ctk)) {
-        if(consume(&ctk,EQUAL) || consume(&ctk,NEQUAL))
+    else if (exprEq()) {
+        if(consume(EQUAL) || consume(NEQUAL))
         {
-            if(exprRel(ctk)){
+            if(exprRel()){
                 return 1;
             }
         }
     }
-    ctk = tkStart;
+    crtTk = tkStart;
     return 0;
 }
 
 //exprAnd: exprAnd AND exprEq | exprEq ;
-int exprAnd(Token *ctk){
-    Token *tkStart = ctk;
-    if(exprEq(ctk))
+int exprAnd(){
+    Token *tkStart = crtTk;
+    if(exprEq())
     {
         return 1;
     }
-    else if(exprAnd(ctk)){
-        if(consume(&ctk,AND)){
-            if(exprEq(ctk)){
+    else if(exprAnd()){
+        if(consume(AND)){
+            if(exprEq()){
                 return 1;
             }
         }
     }
-    ctk= tkStart;
+    crtTk= tkStart;
     return 0;
 }
 
 //exprOr: exprOr OR exprAnd | exprAnd ;
-int exprOr(Token *ctk){
-    Token *tkStart = ctk;
-    if(exprAnd(ctk))
+int exprOr(){
+    Token *tkStart = crtTk;
+    if(exprAnd())
     {
         return 1;
     }
-    else if(exprOr(ctk)){
-        if(consume(&ctk,OR)){
-            if(exprAnd(ctk)){
+    else if(exprOr()){
+        if(consume(OR)){
+            if(exprAnd()){
                 return 1;
             }
         }
     }
-    ctk= tkStart;
+    crtTk= tkStart;
     return 0;
 }
 
 //( SUB | NOT ) exprUnary | exprPostfix ;
-int exprUnary(Token *ctk)
+int exprUnary()
 {
-    Token *tkStart = ctk;
-    if(consume(&ctk,SUB)||consume(&ctk,NOT))
+    Token *tkStart = crtTk;
+    if(consume(SUB)||consume(NOT))
     {
-        if(exprUnary(ctk))
+        if(exprUnary())
         {
             return 1;
         }
-    } else if(exprPostfix(ctk))
+    } else if(exprPostfix())
     {
         return 1;
     }
-    ctk= tkStart;
+    crtTk= tkStart;
     return 0;
 }
 
 //exprAssign: exprUnary ASSIGN exprAssign | exprOr ;
-int exprAssign(Token *ctk)
+int exprAssign()
 {
-    Token *tkStart = ctk;
-    if(exprUnary(ctk))
+    Token *tkStart = crtTk;
+    if(exprUnary())
     {
-        if(consume(&ctk, ASSIGN))
+        if(consume(ASSIGN))
         {
-            if(exprAssign(ctk))
+            if(exprAssign())
             {
                 return 1;
             }
         }
-    } else if(exprOr(ctk))
+    }
+    crtTk= tkStart;
+    if(exprOr())
     {
         return 1;
     }
-    ctk= tkStart;
+    crtTk= tkStart;
     return 0;
 }
 
 //expr: exprAssign ;
-int expr(Token *ctk)
+int expr()
 {
-    Token *tkStart = ctk;
-    if(exprAssign(ctk)){
+    Token *tkStart = crtTk;
+    if(exprAssign()){
         return 1;
     }
-    ctk= tkStart;
+    crtTk= tkStart;
     return 0;
 }
 
 //stmCompound: LACC ( declVar | stm )* RACC ;
-int stmCompound(Token *ctk)
+int stmCompound()
 {
-    Token *tkStart = ctk;
-    if (consume(&ctk, LACC)) {
-        while (declVar(ctk) || stm(ctk)) {};
-        if(consume(&ctk, RACC)){
+    Token *tkStart = crtTk;
+    if (consume(LACC)) {
+        while (declVar() || stm()) {};
+        if(consume(RACC)){
             return 1;
         }
     }
-    ctk = tkStart;
+    crtTk = tkStart;
     return 0;
 }
 
@@ -284,42 +285,42 @@ int stmCompound(Token *ctk)
            | BREAK SEMICOLON
            | RETURN expr? SEMICOLON
            | expr? SEMICOLON ;*/
-int stm(Token *ctk)
+int stm()
 {
-    Token *tkStart = ctk;
-    if (stmCompound(ctk)) {
+    Token *tkStart = crtTk;
+    if (stmCompound()) {
         return 1;
-    } else if (consume(&ctk, IF)) {
-        if (consume(&ctk, LPAR)) {
-            if (expr(ctk)) {
-                if (consume(&ctk, RPAR)) {
-                    if (stm(ctk)) {
-                        consume(&ctk, ELSE);
-                        stm(ctk);
+    } else if (consume(IF)) {
+        if (consume(LPAR)) {
+            if (expr()) {
+                if (consume(RPAR)) {
+                    if (stm()) {
+                        consume(ELSE);
+                        stm();
                         return 1;
                     }
                 }
             }
         }
-    } else if(consume(&ctk, WHILE)){
-        if (consume(&ctk, LPAR)) {
-            if (expr(ctk)) {
-                if (consume(&ctk, RPAR)) {
-                    if (stm(ctk)) {
+    } else if(consume(WHILE)){
+        if (consume(LPAR)) {
+            if (expr()) {
+                if (consume(RPAR)) {
+                    if (stm()) {
                         return 1;
                     }
                 }
             }
         }
-    } else if(consume(&ctk, FOR)){
-        if (consume(&ctk, LPAR)){
-            expr(ctk);
-            if(consume(&ctk, SEMICOL)){
-                expr(ctk);
-                if (consume(&ctk, SEMICOL)) {
-                    expr(ctk);
-                    if (consume(&ctk, RPAR)) {
-                        if(stm(ctk))
+    } else if(consume(FOR)){
+        if (consume(LPAR)){
+            expr();
+            if(consume(SEMICOL)){
+                expr();
+                if (consume(SEMICOL)) {
+                    expr();
+                    if (consume(RPAR)) {
+                        if(stm())
                         {
                             return 1;
                         }
@@ -328,168 +329,170 @@ int stm(Token *ctk)
             }
 
         }
-    } else if (consume(&ctk, BREAK)){
-        if(consume(&ctk, SEMICOL)){
+    } else if (consume(BREAK)){
+        if(consume(SEMICOL)){
             return 1;
         }
-    } else if (consume(&ctk, RETURN)){
-        expr(ctk);
-        if(consume(&ctk, SEMICOL)){
+    } else if (consume(RETURN)){
+        expr();
+        if(consume(SEMICOL)){
             return 1;
         }
     } else {
-        expr(ctk);
-        if(consume(&ctk, SEMICOL)){
+        expr();
+        if(consume(SEMICOL)){
             return 1;
         }
     }
-    ctk=tkStart;
+    crtTk=tkStart;
     return 0;
 }
 
 //arrayDecl: LBRACKET expr? RBRACKET ;
-int arrayDecl(Token *ctk)
+int arrayDecl()
 {
-    Token *tkStart=ctk;
-    if(consume(&ctk,LBRACK))
+    Token *tkStart=crtTk;
+    if(consume(LBRACK))
     {
-        expr(ctk);
-        if(consume(&ctk,RBRACK))
+        expr();
+        if(consume(RBRACK))
         {
             return 1;
         }
     }
-    ctk=tkStart;
+    crtTk=tkStart;
     return 0;
 }
 
 //typeBase: INT | DOUBLE | CHAR | STRUCT ID ;
-int typeBase(Token *ctk)
+int typeBase()
 {
-    Token *tkStart=ctk;
-    if(consume(&ctk,INT))
+    Token *tkStart=crtTk;
+    if(consume(INT))
         return 1;
-    ctk=tkStart;
-    if(consume(&ctk,DOUBLE))
+    crtTk=tkStart;
+    if(consume(DOUBLE))
         return 1;
-    ctk=tkStart;
-    if(consume(&ctk,CHAR))
+    crtTk=tkStart;
+    if(consume(CHAR))
         return 1;
-    ctk=tkStart;
-    if(consume(&ctk,STRUCT))
+    crtTk=tkStart;
+    if(consume(STRUCT))
         return 1;
-    ctk=tkStart;
+    crtTk=tkStart;
     return 0;
 }
 
 //declVar:  typeBase ID arrayDecl? ( COMMA ID arrayDecl? )* SEMICOLON ;
-int declVar(Token *ctk)
+int declVar()
 {
-    Token *tkStart=ctk;
-    if(typeBase(ctk))
+    Token *tkStart=crtTk;
+    if(typeBase())
     {
-        if(consume(&ctk,ID))
+        if(consume(ID))
         {
-            arrayDecl(ctk);
-            while(consume(&ctk,COMMA))
+            arrayDecl();
+            while(consume(COMMA))
             {
-                if(consume(&ctk,ID))
+                if(consume(ID))
                 {
-                    arrayDecl(ctk);
+                    arrayDecl();
                 }
             }
-            if(consume(&ctk,SEMICOL))
+            if(consume(SEMICOL))
                 return 1;
         }
     }
-    ctk=tkStart;
+    crtTk=tkStart;
     return 0;
 }
 
 //funcArg: typeBase ID arrayDecl?
-int funcArg(Token *ctk)
+int funcArg()
 {
-    Token *tkStart=ctk;
-    if(typeBase(ctk))
+    Token *tkStart=crtTk;
+    if(typeBase())
     {
-        if(consume(&ctk,ID))
+        if(consume(ID))
         {
-            arrayDecl(ctk);
+            arrayDecl();
             return 1;
         }
     }
-    ctk=tkStart;
+    crtTk=tkStart;
     return 0;
 }
 
 //declFunc: ( typeBase MUL? | VOID ) ID LPAR ( funcArg ( COMMA funcArg )* )? RPAR stmCompound ;
-int declFunc(Token *ctk)
+int declFunc()
 {
-    Token *tkStart=ctk;
+    Token *tkStart=crtTk;
     int valid=0;
-    if(typeBase(ctk)){
-        consume(&ctk,MUL);
+    if(typeBase()){
+        consume(MUL);
         valid = 1;
-    } else if(consume(&ctk,VOID)){
+    } else if(consume(VOID)){
         valid = 1;
     }
 
-    if(valid && consume(&ctk,ID)){
-        if(consume(&ctk,LPAR)){
-            if(funcArg(ctk))
+    if(valid && consume(ID)){
+        if(consume(LPAR)){
+            if(funcArg())
             {
-                while(consume(&ctk,COMMA) && funcArg(ctk)){};
+                while(consume(COMMA) && funcArg()){};
             }
-            if(consume(&ctk,RPAR)){
-                if(stmCompound(ctk)){
+            if(consume(RPAR)){
+                if(stmCompound()){
                     return 1;
                 }
             }
         }
     }
-    ctk=tkStart;
+    crtTk=tkStart;
     return 0;
 }
 
 //declStruct: STRUCT ID LACC declVar* RACC SEMICOLON ;
-int declStruct(Token *ctk)
+int declStruct()
 {
-    Token *tkStart=ctk;
-    if(consume(&ctk,STRUCT)){
-        if(consume(&ctk,ID)){
-            if(consume(&ctk,LACC)){
-                while(declVar(ctk)){};
-                if(consume(&ctk,RACC)){
-                    if(consume(&ctk,SEMICOL)){
+    Token *tkStart=crtTk;
+    if(consume(STRUCT)){
+        if(consume(ID)){
+            if(consume(LACC)){
+                while(declVar()){};
+                if(consume(RACC)){
+                    if(consume(SEMICOL)){
                        return 1;
                     }
                 }
             }
         }
     }
-    ctk=tkStart;
+    crtTk=tkStart;
     return 0;
 }
 
 //unit: ( declStruct | declFunc | declVar )* END ;
-int ruleUnit(Token *ctk)
+int ruleUnit()
 {
-    Token *tkStart=ctk;
-    while (!consume(&ctk, END)) {
-        if (declStruct(ctk) || declFunc(ctk) || declVar(ctk)) {
+    Token *tkStart=crtTk;
+    while (!consume(END)) {
+        if (declStruct() || declFunc() || declVar()) {
 
         }
     }
     if ((consumedTk != NULL) && (consumedTk->code==END))
         return 1;
-    ctk = tkStart;
+    crtTk = tkStart;
     return 0;
 }
 
 int asint(Token * tokens)
 {
     int sc;
-    if(tokens!=NULL)
+    if (tokens != NULL) {
+        crtTk = tokens;
         sc = ruleUnit(tokens);
+    }
     return sc;
 }
