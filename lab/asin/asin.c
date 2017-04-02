@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "asin.h"
 
 static Token *consumedTk;
@@ -45,27 +46,38 @@ int exprPrimary(){
     return 0;
 }
 
-
-/*exprPostfix: exprPostfix LBRACKET expr RBRACKET
-           | exprPostfix DOT ID | exprPrimary ;*/
-int exprPostfix(){
+/*exprPostfix1: LBRACK expr RBRACK exprPostfix1
+          | DOT ID exprPostfix1 | eps*/
+int exprPostfix1() {
     Token *tkStart = crtTk;
-    if(exprPrimary()){
-        return 1;
-    } else if(exprPostfix()){
-        if(consume(DOT)){
-            if(consume(ID)){
-                return 1;
-            }
-        }else if(consume(LBRACK)){
-            if(expr()){
-                if(consume(RBRACK)){
+    if (consume(LBRACK)) {
+        if (expr()) {
+            if (consume(RBRACK)) {
+                if (exprPostfix1()) {
                     return 1;
                 }
             }
         }
-        else
-            err("err at exprPostfix");
+    }
+    crtTk = tkStart;
+    if (consume(DOT)) {
+        if (consume(ID)) {
+            if (exprPostfix1()) {
+                return 1;
+            }
+        }
+    }
+    crtTk = tkStart;
+    return 1;
+}
+
+//exprPostfix: exprPrimary exprPostfix1;
+int exprPostfix(){
+    Token *tkStart = crtTk;
+    if(exprPrimary()){
+       if(exprPostfix1()){
+           return 1;
+       }
     }
     crtTk = tkStart;
     return 0;
@@ -102,109 +114,163 @@ int exprCast()
     return 0;
 }
 
-//exprRel: exprRel ( LESS | LESSEQ | GREATER | GREATEREQ ) exprAdd | exprAdd ;
-int exprRel()
-{
+//exprMul1: ( MUL | DIV ) exprCast exprMul1 | eps
+int exprMul1(){
     Token *tkStart = crtTk;
-    if(exprAdd()){
-        return 1;
-    } else if (exprRel()){
-        if( consume(LESS) || consume(LESSEQ)
-                || consume(GRT) || consume(GRTEQ)){
-            if(exprAdd()){
+    if(consume(MUL) || consume(DIV)){
+        if(exprCast()){
+            if(exprMul1()){
                 return 1;
             }
         }
     }
     crtTk = tkStart;
-    return 0;
+    return 1;
 }
 
-//exprAdd: exprAdd ( ADD | SUB ) exprMul | exprMul ;
-int exprAdd()
-{
-    Token *tkStart = crtTk;
-    if (exprMul()){
-        return 1;
-    } else if (exprAdd())
-    {
-        if(consume(ADD) || consume(SUB)){
-            if (exprMul()){
-                return 1;
-            }
-        }
-    }
-    crtTk = tkStart;
-    return 0;
-}
-
-//exprMul: exprMul ( MUL | DIV ) exprCast | exprCast ;
+//exprMul: exprCast exprMul1;
 int exprMul(){
     Token *tkStart = crtTk;
-    if (exprCast()){
-        return 1;
-    } else if (exprMul())
+    if(exprCast())
     {
-        if(consume(MUL) || consume(DIV)){
-            if (exprCast()){
-                return 1;
-            }
-        }
-    }
-    crtTk = tkStart;
-    return 0;
-}
-
-
-//exprEq: exprEq ( EQUAL | NOTEQ ) exprRel | exprRel ;
-int exprEq(){
-    Token *tkStart = crtTk;
-    if(exprRel())
-    {
-        return 1;
-    }
-    else if (exprEq()) {
-        if(consume(EQUAL) || consume(NEQUAL))
-        {
-            if(exprRel()){
-                return 1;
-            }
-        }
-    }
-    crtTk = tkStart;
-    return 0;
-}
-
-//exprAnd: exprAnd AND exprEq | exprEq ;
-int exprAnd(){
-    Token *tkStart = crtTk;
-    if(exprEq())
-    {
-        return 1;
-    }
-    else if(exprAnd()){
-        if(consume(AND)){
-            if(exprEq()){
-                return 1;
-            }
+        if(exprMul1()){
+            return 1;
         }
     }
     crtTk= tkStart;
     return 0;
 }
 
-//exprOr: exprOr OR exprAnd | exprAnd ;
+//exprAdd1: ( ADD | SUB ) exprMul exprAdd1 | eps
+int exprAdd1(){
+    Token *tkStart = crtTk;
+    if(consume(ADD) || consume(SUB)){
+        if(exprMul()){
+            if(exprAdd1()){
+                return 1;
+            }
+        }
+    }
+    crtTk = tkStart;
+    return 1;
+}
+
+//exprAdd: exprMul exprAdd1;
+int exprAdd(){
+    Token *tkStart = crtTk;
+    if(exprMul())
+    {
+        if(exprAdd1()){
+            return 1;
+        }
+    }
+    crtTk= tkStart;
+    return 0;
+}
+
+//exprRel1: ( LESS | LESSEQ | GREATER | GREATEREQ ) exprAdd exprRel1 | eps
+int exprRel1(){
+    Token *tkStart = crtTk;
+    if( consume(LESS) || consume(LESSEQ)
+            || consume(GRT) || consume(GRTEQ)){
+        if(exprAdd()){
+            if(exprRel1()){
+                return 1;
+            }
+        }
+    }
+    crtTk = tkStart;
+    return 1;
+}
+
+//exprRel: exprAdd exprRel1;
+int exprRel(){
+    Token *tkStart = crtTk;
+    if(exprAdd())
+    {
+        if(exprRel1()){
+            return 1;
+        }
+    }
+    crtTk= tkStart;
+    return 0;
+}
+
+//exprEq1: ( EQUAL | NOTEQ ) exprRel exprEq1 | eps
+int exprEq1(){
+    Token *tkStart = crtTk;
+    if(consume(EQUAL) || consume(NEQUAL)){
+        if(exprRel()){
+            if(exprEq1()){
+                return 1;
+            }
+        }
+    }
+    crtTk = tkStart;
+    return 1;
+}
+
+//exprEq: exprRel exprEq1;
+int exprEq(){
+    Token *tkStart = crtTk;
+    if(exprRel())
+    {
+        if(exprEq1()){
+            return 1;
+        }
+    }
+    crtTk= tkStart;
+    return 0;
+}
+
+//exprAnd1: AND exprEq exprAnd1 | eps
+int exprAnd1(){
+    Token *tkStart = crtTk;
+    if(consume(AND)){
+        if(exprEq()){
+            if(exprAnd1()){
+                return 1;
+            }
+        }
+    }
+    crtTk = tkStart;
+    return 1;
+}
+
+//exprAnd: exprEq exprAnd1;
+int exprAnd(){
+    Token *tkStart = crtTk;
+    if(exprEq())
+    {
+        if(exprAnd1()){
+            return 1;
+        }
+    }
+    crtTk= tkStart;
+    return 0;
+}
+
+//exprOr1: OR exprAND exprOr1 | eps
+int exprOr1(){
+    Token *tkStart = crtTk;
+    if(consume(OR)){
+        if(exprAnd()){
+            if(exprOr1()){
+                return 1;
+            }
+        }
+    }
+    crtTk = tkStart;
+    return 1;
+}
+
+//exprOr: exprAnd exprOr1;
 int exprOr(){
     Token *tkStart = crtTk;
     if(exprAnd())
     {
-        return 1;
-    }
-    else if(exprOr()){
-        if(consume(OR)){
-            if(exprAnd()){
-                return 1;
-            }
+        if(exprOr1()){
+            return 1;
         }
     }
     crtTk= tkStart;
@@ -268,7 +334,8 @@ int stmCompound()
 {
     Token *tkStart = crtTk;
     if (consume(LACC)) {
-        while (declVar() || stm()) {};
+        while (declVar() || stm()) {
+        };
         if(consume(RACC)){
             return 1;
         }
@@ -349,6 +416,8 @@ int stm()
 }
 
 //arrayDecl: LBRACKET expr? RBRACKET ;
+
+//arrayDecl: LBRACKET expr? RBRACKET ;
 int arrayDecl()
 {
     Token *tkStart=crtTk;
@@ -377,8 +446,11 @@ int typeBase()
     if(consume(CHAR))
         return 1;
     crtTk=tkStart;
-    if(consume(STRUCT))
-        return 1;
+    if(consume(STRUCT)){
+        if(consume(ID)){
+            return 1;
+        }
+    }
     crtTk=tkStart;
     return 0;
 }
@@ -473,12 +545,24 @@ int declStruct()
 }
 
 //unit: ( declStruct | declFunc | declVar )* END ;
+
+//unit: ( declStruct | declFunc | declVar )* END ;
 int ruleUnit()
 {
     Token *tkStart=crtTk;
     while (!consume(END)) {
-        if (declStruct() || declFunc() || declVar()) {
-
+        if (declStruct()) {
+#ifdef DEBUG
+            printf("declStruct\n");
+#endif
+        } else if (declFunc()) {
+#ifdef DEBUG
+            printf("declFunc\n");
+#endif
+        } else if (declVar()) {
+#ifdef DEBUG
+            printf("declVar\n");
+#endif
         }
     }
     if ((consumedTk != NULL) && (consumedTk->code==END))

@@ -37,9 +37,11 @@ int main(int argc, char * argv[]) {
     if(tokens==NULL){
         err("Error at alex");
     }
-
-    if((sc=asint(tokens))!=0)
-        fprintf(stdout,"\nSintactic analysis passed!\n");
+    printf("\nLexical analyzer produced tokens!\n");
+    if ((sc = asint(tokens)) == 0) {
+        err("Error at alex");
+    }
+    fprintf(stdout, "\nSyntactic analysis passed!\n");
 
     return 0;
 }

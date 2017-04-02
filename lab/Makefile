@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := all
 
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -DDEBUG
 
 ALEX_DIR = ./alex
 ASIN_DIR = ./asin
