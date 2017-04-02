@@ -31,15 +31,21 @@ int exprPrimary(){
             if (consume(RPAR)) {
                 return 1;
             } else{
-                err("err at exprPrimary missing ", atomNames[RPAR]);
+                err("exprPrimary missing %s", atomNames[RPAR]);
             }
         }
         return 1;
     } else if (consume(CT_INT) || consume(CT_REAL) ||
             consume(CT_CHAR) || consume(CT_STRING)){
         return 1;
-    } else if (consume(LPAR) && expr() && consume(RPAR)){
-        return 1;
+    } else if (consume(LPAR)) {
+        if (expr()) {
+            if (consume(RPAR)) {
+                return 1;
+            } else
+                err("exprPrimary missing %s", atomNames[RPAR]);
+        } else
+            err("exprPrimary missing expr after %s", atomNames[LPAR]);
     }
 
     crtTk = tkStart;
@@ -56,8 +62,8 @@ int exprPostfix1() {
                 if (exprPostfix1()) {
                     return 1;
                 }
-            }
-        }
+            } else err("exprPostfix1 missing %s", atomNames[RBRACK]);
+        } else err("exprPostfix1 missing expr after %s", atomNames[LBRACK]);
     }
     crtTk = tkStart;
     if (consume(DOT)) {
@@ -65,7 +71,7 @@ int exprPostfix1() {
             if (exprPostfix1()) {
                 return 1;
             }
-        }
+        } else err("exprPostfix1 missing %s after ", atomNames[ID], atomNames[DOT]);
     }
     crtTk = tkStart;
     return 1;
@@ -338,7 +344,7 @@ int stmCompound()
         };
         if(consume(RACC)){
             return 1;
-        }
+        }else err("stmCompound missing %s", atomNames[RACC]);
     }
     crtTk = tkStart;
     return 0;
@@ -362,11 +368,13 @@ int stm()
             if (expr()) {
                 if (consume(RPAR)) {
                     if (stm()) {
-                        consume(ELSE);
-                        stm();
+                        if(consume(ELSE)){
+                            if (stm()){
+                            } else err("missing stm after %s", atomNames[ELSE]);
+                        }
                         return 1;
                     }
-                }
+                }else err("stm missing %s", atomNames[RPAR]);
             }
         }
     } else if(consume(WHILE)){
@@ -376,7 +384,7 @@ int stm()
                     if (stm()) {
                         return 1;
                     }
-                }
+                } else err("stm missing %s", atomNames[RPAR]);
             }
         }
     } else if(consume(FOR)){
@@ -391,24 +399,27 @@ int stm()
                         {
                             return 1;
                         }
-                    }
-                }
-            }
+                    }else err("stm missing %s", atomNames[RPAR]);
+                } else err("stm missing %s", atomNames[SEMICOL]);
+            } else err("stm missing %s", atomNames[SEMICOL]);
 
         }
     } else if (consume(BREAK)){
         if(consume(SEMICOL)){
             return 1;
-        }
+        } else err("stm missing %s", atomNames[SEMICOL]);
     } else if (consume(RETURN)){
         expr();
         if(consume(SEMICOL)){
             return 1;
-        }
+        } else err("stm missing %s", atomNames[SEMICOL]);
     } else {
-        expr();
-        if(consume(SEMICOL)){
+        int exprFound;
+        exprFound = expr();
+        if (consume(SEMICOL)) {
             return 1;
+        } else if (exprFound) {
+            err("stm missing %s", atomNames[SEMICOL]);
         }
     }
     crtTk=tkStart;
@@ -427,7 +438,7 @@ int arrayDecl()
         if(consume(RBRACK))
         {
             return 1;
-        }
+        } else err("arrayDecl missing %s", atomNames[RBRACK]);
     }
     crtTk=tkStart;
     return 0;
@@ -469,10 +480,11 @@ int declVar()
                 if(consume(ID))
                 {
                     arrayDecl();
-                }
+                } else err("declVar missing %s", atomNames[ID]);
             }
             if(consume(SEMICOL))
                 return 1;
+            else err("declVar missing %s", atomNames[SEMICOL]);
         }
     }
     crtTk=tkStart;
@@ -511,13 +523,17 @@ int declFunc()
         if(consume(LPAR)){
             if(funcArg())
             {
-                while(consume(COMMA) && funcArg()){};
+                while(consume(COMMA)){
+                    if(funcArg()){
+
+                    } else err("declFunc missing %s", "funcArg");
+                };
             }
             if(consume(RPAR)){
                 if(stmCompound()){
                     return 1;
-                }
-            }
+                } else err("declFunc missing %s after %s", "stmCompound", atomNames[RPAR]);
+            }else err("declFunc missing %s", atomNames[RPAR]);
         }
     }
     crtTk=tkStart;
@@ -535,8 +551,8 @@ int declStruct()
                 if(consume(RACC)){
                     if(consume(SEMICOL)){
                        return 1;
-                    }
-                }
+                    }  else err("declStruct missing %s", atomNames[SEMICOL]);
+                }  else err("declStruct missing %s", atomNames[RACC]);
             }
         }
     }

@@ -660,6 +660,7 @@ Token * alex(char *buff){
     pCrtCh = buff;
     while ((tkcode = getNextToken()) != END) {};
 
+#ifdef DEBUG
     if (tokens != NULL) {
         tk = tokens;
         listTokenPerLines(tk);
@@ -668,5 +669,7 @@ Token * alex(char *buff){
             listTokenPerLines(tk);
         }
     }
+#endif
+
     return tokens;
 }
