@@ -111,8 +111,8 @@ int exprCast()
                 if(exprCast()){
                     return 1;
                 }
-            }
-        }
+            } else err(" exprCast missing %s at line %d", atomNames[RPAR], crtTk->line);
+        } else err(" exprCast missing %s at line %d", "typeName", crtTk->line);
     } else if(exprUnary()){
         return 1;
     }
@@ -128,7 +128,7 @@ int exprMul1(){
             if(exprMul1()){
                 return 1;
             }
-        }
+        } else err(" exprMul missing expr after %s at line %d", atomNames[tkStart->code], crtTk->line);
     }
     crtTk = tkStart;
     return 1;
@@ -155,7 +155,8 @@ int exprAdd1(){
             if(exprAdd1()){
                 return 1;
             }
-        }
+        } else
+            err(" exprAdd missing expr after %s at line %d", atomNames[tkStart->code], crtTk->line);
     }
     crtTk = tkStart;
     return 1;
@@ -183,7 +184,7 @@ int exprRel1(){
             if(exprRel1()){
                 return 1;
             }
-        }
+        } else err(" exprRel missing expr after %s at line %d", atomNames[tkStart->code], crtTk->line);
     }
     crtTk = tkStart;
     return 1;
@@ -210,7 +211,7 @@ int exprEq1(){
             if(exprEq1()){
                 return 1;
             }
-        }
+        } else err(" exprEq missing expr after %s at line %d", atomNames[tkStart->code], crtTk->line);
     }
     crtTk = tkStart;
     return 1;
@@ -237,7 +238,7 @@ int exprAnd1(){
             if(exprAnd1()){
                 return 1;
             }
-        }
+        } else err(" exprAnd missing expr after %s at line %d", atomNames[AND], crtTk->line);
     }
     crtTk = tkStart;
     return 1;
@@ -264,7 +265,7 @@ int exprOr1(){
             if(exprOr1()){
                 return 1;
             }
-        }
+        } else err(" exprOr missing expr after %s at line %d", atomNames[OR], crtTk->line);
     }
     crtTk = tkStart;
     return 1;
@@ -579,6 +580,8 @@ int ruleUnit()
 #ifdef DEBUG
             printf("declVar\n");
 #endif
+        } else{
+            err(" ruleUnit no declaration found before %s at line %d", atomNames[END], crtTk->line);
         }
     }
     if ((consumedTk != NULL) && (consumedTk->code==END))
