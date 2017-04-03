@@ -31,7 +31,7 @@ int exprPrimary(){
             if (consume(RPAR)) {
                 return 1;
             } else{
-                err("exprPrimary missing %s", atomNames[RPAR]);
+                err(" exprPrimary missing %s at line %d", atomNames[RPAR], crtTk->line);
             }
         }
         return 1;
@@ -43,9 +43,9 @@ int exprPrimary(){
             if (consume(RPAR)) {
                 return 1;
             } else
-                err("exprPrimary missing %s", atomNames[RPAR]);
+                err(" exprPrimary missing %s at line %d", atomNames[RPAR], crtTk->line);
         } else
-            err("exprPrimary missing expr after %s", atomNames[LPAR]);
+            err(" exprPrimary missing expr after %s at line %d", atomNames[LPAR], crtTk->line);
     }
 
     crtTk = tkStart;
@@ -62,8 +62,8 @@ int exprPostfix1() {
                 if (exprPostfix1()) {
                     return 1;
                 }
-            } else err("exprPostfix1 missing %s", atomNames[RBRACK]);
-        } else err("exprPostfix1 missing expr after %s", atomNames[LBRACK]);
+            } else err(" exprPostfix1 missing %s at line %d", atomNames[RBRACK], crtTk->line);
+        } else err(" exprPostfix1 missing expr after %s at line at line %d", atomNames[LBRACK], crtTk->line);
     }
     crtTk = tkStart;
     if (consume(DOT)) {
@@ -71,7 +71,7 @@ int exprPostfix1() {
             if (exprPostfix1()) {
                 return 1;
             }
-        } else err("exprPostfix1 missing %s after ", atomNames[ID], atomNames[DOT]);
+        } else err(" exprPostfix1 missing %s at line %d at line %d", atomNames[ID], crtTk->line, crtTk->line);
     }
     crtTk = tkStart;
     return 1;
@@ -344,7 +344,7 @@ int stmCompound()
         };
         if(consume(RACC)){
             return 1;
-        }else err("stmCompound missing %s", atomNames[RACC]);
+        }else err(" stmCompound missing %s at line %d", atomNames[RACC], crtTk->line);
     }
     crtTk = tkStart;
     return 0;
@@ -370,11 +370,11 @@ int stm()
                     if (stm()) {
                         if(consume(ELSE)){
                             if (stm()){
-                            } else err("missing stm after %s", atomNames[ELSE]);
+                            } else err(" missing stm after %s at line %d", atomNames[ELSE], crtTk->line);
                         }
                         return 1;
                     }
-                }else err("stm missing %s", atomNames[RPAR]);
+                }else err(" stm missing %s at line %d", atomNames[RPAR], crtTk->line);
             }
         }
     } else if(consume(WHILE)){
@@ -384,7 +384,7 @@ int stm()
                     if (stm()) {
                         return 1;
                     }
-                } else err("stm missing %s", atomNames[RPAR]);
+                } else err(" stm missing %s at line %d", atomNames[RPAR], crtTk->line);
             }
         }
     } else if(consume(FOR)){
@@ -399,27 +399,27 @@ int stm()
                         {
                             return 1;
                         }
-                    }else err("stm missing %s", atomNames[RPAR]);
-                } else err("stm missing %s", atomNames[SEMICOL]);
-            } else err("stm missing %s", atomNames[SEMICOL]);
+                    }else err(" stm missing %s at line %d", atomNames[RPAR], crtTk->line);
+                } else err(" stm missing %s at line %d", atomNames[SEMICOL], crtTk->line);
+            } else err(" stm missing %s at line %d", atomNames[SEMICOL], crtTk->line);
 
         }
     } else if (consume(BREAK)){
         if(consume(SEMICOL)){
             return 1;
-        } else err("stm missing %s", atomNames[SEMICOL]);
+        } else err(" stm missing %s at line %d", atomNames[SEMICOL], crtTk->line);
     } else if (consume(RETURN)){
         expr();
         if(consume(SEMICOL)){
             return 1;
-        } else err("stm missing %s", atomNames[SEMICOL]);
+        } else err(" stm missing %s at line %d", atomNames[SEMICOL], crtTk->line);
     } else {
         int exprFound;
         exprFound = expr();
         if (consume(SEMICOL)) {
             return 1;
         } else if (exprFound) {
-            err("stm missing %s", atomNames[SEMICOL]);
+            err(" stm missing %s at line %d", atomNames[SEMICOL], crtTk->line);
         }
     }
     crtTk=tkStart;
@@ -438,7 +438,7 @@ int arrayDecl()
         if(consume(RBRACK))
         {
             return 1;
-        } else err("arrayDecl missing %s", atomNames[RBRACK]);
+        } else err(" arrayDecl missing %s at line %d", atomNames[RBRACK], crtTk->line);
     }
     crtTk=tkStart;
     return 0;
@@ -480,11 +480,11 @@ int declVar()
                 if(consume(ID))
                 {
                     arrayDecl();
-                } else err("declVar missing %s", atomNames[ID]);
+                } else err(" declVar missing %s at line %d", atomNames[ID], crtTk->line);
             }
             if(consume(SEMICOL))
                 return 1;
-            else err("declVar missing %s", atomNames[SEMICOL]);
+            else err(" declVar missing %s at line %d", atomNames[SEMICOL], crtTk->line);
         }
     }
     crtTk=tkStart;
@@ -526,14 +526,14 @@ int declFunc()
                 while(consume(COMMA)){
                     if(funcArg()){
 
-                    } else err("declFunc missing %s", "funcArg");
+                    } else err(" declFunc missing %s at line %d", "funcArg", crtTk->line);
                 };
             }
             if(consume(RPAR)){
                 if(stmCompound()){
                     return 1;
-                } else err("declFunc missing %s after %s", "stmCompound", atomNames[RPAR]);
-            }else err("declFunc missing %s", atomNames[RPAR]);
+                } else err(" declFunc missing %s after %s at line %d", "stmCompound", atomNames[RPAR], crtTk->line);
+            }else err(" declFunc missing %s at line %d", atomNames[RPAR], crtTk->line);
         }
     }
     crtTk=tkStart;
@@ -551,8 +551,8 @@ int declStruct()
                 if(consume(RACC)){
                     if(consume(SEMICOL)){
                        return 1;
-                    }  else err("declStruct missing %s", atomNames[SEMICOL]);
-                }  else err("declStruct missing %s", atomNames[RACC]);
+                    }  else err(" declStruct missing %s at line %d", atomNames[SEMICOL], crtTk->line);
+                }  else err(" declStruct missing %s at line %d", atomNames[RACC], crtTk->line);
             }
         }
     }
