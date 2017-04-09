@@ -1,9 +1,75 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "asin.h"
 
 static Token *consumedTk;
 static Token *crtTk;
+static Symbols *symbolsTab;
+static Symbol *crtFunc;
+static Symbol *crtStruct;
+static int crtDepth=0;
+
+void initSymbols(Symbols * symbols) {
+    symbols->begin = NULL;
+    symbols->fill = NULL;
+    symbols->end = NULL;
+}
+
+Symbol *addSymbol(Symbols *symbols,const char * name, int cls) {
+    Symbol *s;
+    if (symbols->fill == symbols->end) { // create more room
+        int count = symbols->end - symbols->begin;
+        int n = count * 2; // double the room
+        if (n == 0)
+            n = 1; // needed for the initial case
+
+        symbols->begin = (Symbol **) realloc(symbols->begin,
+                n * sizeof(Symbol *));
+        if (symbols->begin == NULL)
+            err("not enough memory");
+        symbols->fill = symbols->begin + count;
+        symbols->end = symbols->begin + n;
+    }
+    SAFEALLOC(s, Symbol);
+    *symbols->fill++ = s;
+    s->name = name;
+    s->cls = cls;
+    s->depth = crtDepth;
+    return s;
+}
+
+Symbol *findSymbol(Symbols *symbols, const char *name) {
+    Symbol *s = NULL;
+    int n = symbols->end - symbols->begin;
+    int i;
+    for (i = 0; i < n; i++) {
+        if (!strncmp(symbols->begin[i]->name, name, strlen(name)))
+            s =  symbols->begin[i];
+    }
+    return s;
+}
+
+void addVar(Token *tkName, Type t) {
+    Symbol *s;
+    if (crtStruct) {
+        if (findSymbol(&crtStruct->members, tkName->info.text))
+            err("symbol redefinition: %s at line %d", tkName->info.text, crtTk->line);
+        s = addSymbol(&crtStruct->members, tkName->info.text, CLS_VAR);
+    } else if (crtFunc) {
+        s = findSymbol(symbolsTab, tkName->info.text);
+        if (s && s->depth == crtDepth)
+            err("symbol redefinition: %s at line %d", tkName->info.text, crtTk->line);
+        s = addSymbol(symbolsTab, tkName->info.text, CLS_VAR);
+        s->mem = MEM_LOCAL;
+    } else {
+        if (findSymbol(symbolsTab, tkName->info.text))
+            err("symbol redefinition: %s at line %d", tkName->info.text, crtTk->line);
+        s = addSymbol(symbolsTab, tkName->info.text, CLS_VAR);
+        s->mem = MEM_GLOBAL;
+    }
+    s->type = t;
+}
 
 int consume(atomType code)
 {
@@ -90,11 +156,14 @@ int exprPostfix(){
 }
 
 //typeName: typeBase arrayDecl?
-int typeName()
-{
+int typeName() {
+    Type *type;
+    SAFEALLOC(type,Type);
     Token *tkStart = crtTk;
-    if (typeBase()) {
-        arrayDecl ();
+    if (typeBase(type)) {
+        if (!arrayDecl(type)) {
+            type->nElements = -1;
+        }
         return 1;
     }
     crtTk = tkStart;
@@ -351,7 +420,6 @@ int stmCompound()
     return 0;
 }
 
-
 /*stm: stmCompound
            | IF LPAR expr RPAR stm ( ELSE stm )?
            | WHILE LPAR expr RPAR stm
@@ -428,14 +496,15 @@ int stm()
 }
 
 //arrayDecl: LBRACKET expr? RBRACKET ;
-
-//arrayDecl: LBRACKET expr? RBRACKET ;
-int arrayDecl()
+int arrayDecl(Type *type)
 {
     Token *tkStart=crtTk;
     if(consume(LBRACK))
     {
         expr();
+        {
+            type->nElements = 0;       // for now do not compute the real size
+        }
         if(consume(RBRACK))
         {
             return 1;
@@ -446,20 +515,36 @@ int arrayDecl()
 }
 
 //typeBase: INT | DOUBLE | CHAR | STRUCT ID ;
-int typeBase()
+int typeBase(Type *type)
 {
     Token *tkStart=crtTk;
-    if(consume(INT))
+    if(consume(INT)){
+        type->typeBase=TB_INT;
         return 1;
+    }
     crtTk=tkStart;
-    if(consume(DOUBLE))
+    if(consume(DOUBLE)){
+        type->typeBase=TB_DOUBLE;
         return 1;
+    }
     crtTk=tkStart;
-    if(consume(CHAR))
+    if(consume(CHAR)){
+        type->typeBase=TB_CHAR;
         return 1;
+    }
     crtTk=tkStart;
     if(consume(STRUCT)){
         if(consume(ID)){
+            {
+                Token *tkName=consumedTk;
+                Symbol *s = findSymbol(symbolsTab, tkName->info.text);
+                if (s == NULL)
+                    err("undefined symbol: %s at line %d", tkName->info.text, crtTk->line);
+                if (s->cls != CLS_STRUCT)
+                    err("%s is not a struct at line %d", tkName->info.text, crtTk->line);
+                type->typeBase = TB_STRUCT;
+                type->s = s;
+            }
             return 1;
         }
     }
@@ -471,16 +556,30 @@ int typeBase()
 int declVar()
 {
     Token *tkStart=crtTk;
-    if(typeBase())
+    Token* tkName;
+    Type varType;
+    if(typeBase(&varType))
     {
         if(consume(ID))
         {
-            arrayDecl();
+            tkName = consumedTk;
+            if(!arrayDecl(&varType)){
+                varType.nElements=-1;
+            }
+            {
+                addVar(tkName,varType);
+            }
             while(consume(COMMA))
             {
                 if(consume(ID))
                 {
-                    arrayDecl();
+                    tkName = consumedTk;
+                    if(!arrayDecl(&varType)){
+                        varType.nElements=-1;
+                    }
+                    {
+                        addVar(tkName,varType);
+                    }
                 } else err(" declVar missing %s at line %d", atomNames[ID], crtTk->line);
             }
             if(consume(SEMICOL))
@@ -496,11 +595,26 @@ int declVar()
 int funcArg()
 {
     Token *tkStart=crtTk;
-    if(typeBase())
+    Token* tkName;
+    Type varType;
+    if(typeBase(&varType))
     {
         if(consume(ID))
         {
-            arrayDecl();
+            tkName = consumedTk;
+            if(!arrayDecl(&varType)){
+                varType.nElements=-1;
+            }
+
+            {
+                Symbol *s = addSymbol(symbolsTab, tkName->info.text, CLS_VAR);
+                s->mem = MEM_ARG;
+                s->type = varType;
+                s = addSymbol(&crtFunc->args, tkName->info.text, CLS_VAR);
+                s->mem = MEM_ARG;
+                s->type = varType;
+            }
+
             return 1;
         }
     }
@@ -512,16 +626,35 @@ int funcArg()
 int declFunc()
 {
     Token *tkStart=crtTk;
+    Token* tkName;
+    Type varType;
     int valid=0;
-    if(typeBase()){
-        consume(MUL);
+    if(typeBase(&varType)){
+        if(consume(MUL)){
+            varType.nElements=0;
+        }
+        else{
+            varType.nElements=-1;
+        }
         valid = 1;
     } else if(consume(VOID)){
+        {
+            varType.typeBase=TB_VOID;
+        }
         valid = 1;
     }
 
     if(valid && consume(ID)){
+        tkName = consumedTk;
         if(consume(LPAR)){
+            {
+                if (findSymbol(symbolsTab, tkName->info.text))
+                    err("symbol redefinition: %s at line %d", tkName->info.text, crtTk->line);
+                crtFunc = addSymbol(symbolsTab, tkName->info.text, CLS_FUNC);
+                initSymbols(&crtFunc->args);
+                crtFunc->type = varType;
+                crtDepth++;
+            }
             if(funcArg())
             {
                 while(consume(COMMA)){
@@ -531,7 +664,14 @@ int declFunc()
                 };
             }
             if(consume(RPAR)){
+                {
+                    crtDepth--;
+                }
                 if(stmCompound()){
+                    {
+                        deleteSymbolsAfter(symbolsTab, crtFunc);
+                        crtFunc = NULL;
+                    }
                     return 1;
                 } else err(" declFunc missing %s after %s at line %d", "stmCompound", atomNames[RPAR], crtTk->line);
             }else err(" declFunc missing %s at line %d", atomNames[RPAR], crtTk->line);
@@ -545,14 +685,25 @@ int declFunc()
 int declStruct()
 {
     Token *tkStart=crtTk;
+    Token *tkName;
     if(consume(STRUCT)){
         if(consume(ID)){
-            if(consume(LACC)){
+            tkName=consumedTk;
+            if (consume(LACC)){
+                {
+                    if (findSymbol(symbolsTab, tkName->info.text)!=NULL)
+                        err("symbol redefinition: %s at line %d", tkName->info.text, tkName->line);
+                    crtStruct = addSymbol(symbolsTab, tkName->info.text, CLS_STRUCT);
+                    initSymbols(&crtStruct->members);
+                }
                 while(declVar()){};
-                if(consume(RACC)){
-                    if(consume(SEMICOL)){
-                       return 1;
-                    }  else err(" declStruct missing %s at line %d", atomNames[SEMICOL], crtTk->line);
+                if (consume(RACC)) {
+                    if (consume(SEMICOL)) {
+                        {
+                            crtStruct = NULL;
+                        }
+                        return 1;
+                    } else err(" declStruct missing %s at line %d", atomNames[SEMICOL], crtTk->line);
                 }  else err(" declStruct missing %s at line %d", atomNames[RACC], crtTk->line);
             }
         }
@@ -593,6 +744,8 @@ int ruleUnit()
 int asint(Token * tokens)
 {
     int sc;
+    SAFEALLOC(symbolsTab,Symbols);
+    initSymbols(symbolsTab);
     if (tokens != NULL) {
         crtTk = tokens;
         sc = ruleUnit(tokens);

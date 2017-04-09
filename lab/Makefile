@@ -20,4 +20,4 @@ all: alex.o asin.o acc.o
 	gcc -o acc $^
 
 clean:
-	rm alex.o asin.o
+	rm alex.o asin.o acc.o acc

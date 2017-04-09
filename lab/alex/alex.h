@@ -1,6 +1,9 @@
 #ifndef ALEX_H
 #define ALEX_H
 
+#define SAFEALLOC(var,Type) if((var=(Type*)malloc(sizeof(Type)))==NULL)err("not enough memory");
+#define SAFEALLOCSZ(var,Type,size) if((var=(Type*)malloc(sizeof(Type)*size))==NULL)err("not enough memory");
+
 void err(const char *fmt, ...);
 
 typedef union TokenInfo{
@@ -68,7 +71,6 @@ typedef enum{
     LAST_SATOM  = DOT,
     NUM_SATOMS  = LAST_SATOM-FIRST_SATOM
 } atomType;
-
 
 typedef struct _Token{
     atomType code; // codul (numele)

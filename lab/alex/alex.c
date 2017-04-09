@@ -11,9 +11,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define SAFEALLOC(var,Type) if((var=(Type*)malloc(sizeof(Type)))==NULL)err("not enough memory");
-#define SAFEALLOCSZ(var,Type,size) if((var=(Type*)malloc(sizeof(Type)*size))==NULL)err("not enough memory");
-
 static Token *lastToken, *tokens;
 static int line = 0;
 static char * pCrtCh;
@@ -28,6 +25,9 @@ void err(const char *fmt, ...) {
     fputc('\n', stderr);
     va_end(va);
     exit(-1);
+}
+void tkerr(Token *tk,const char *fmt, ...){
+
 }
 
 Token *addTk(int code, int line) {
