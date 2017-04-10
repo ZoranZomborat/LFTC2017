@@ -41,11 +41,13 @@ Symbol *addSymbol(Symbols *symbols,const char * name, int cls) {
 
 Symbol *findSymbol(Symbols *symbols, const char *name) {
     Symbol *s = NULL;
-    int n = symbols->end - symbols->begin;
+    int n = symbols->fill - symbols->begin;
     int i;
     for (i = 0; i < n; i++) {
-        if (!strncmp(symbols->begin[i]->name, name, strlen(name)))
-            s =  symbols->begin[i];
+        if (strlen(symbols->begin[i]->name) == strlen(name)) {
+            if (!strncmp(symbols->begin[i]->name, name, strlen(name)))
+                s = symbols->begin[i];
+        }
     }
     return s;
 }
@@ -69,6 +71,46 @@ void addVar(Token *tkName, Type t) {
         s->mem = MEM_GLOBAL;
     }
     s->type = t;
+}
+
+int deleteSymbolsAfter(Symbols *st,Symbol *symbol){
+
+    int i,j,n;
+    n=st->fill-st->begin;
+    for(i=0;i<n;i++){
+        if(st->begin[i]==symbol){
+            for(j=n-1;i<i;j--){
+                free(st->begin[j]);
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+char* getDepthFormat(Symbol *s) {
+    char *str;
+    int i, n = s->depth;
+    str = (char *) malloc(n);
+    for (i = 0; i < n; i++) {
+        str[i] = '\t';
+    }
+    return str;
+}
+
+int listSymbols(Symbols *st) {
+    int i, n;
+    if (st == NULL)
+        return 0;
+    n = st->fill - st->begin;
+    for (i = 0; i < n; i++) {
+        printf("%s-%s\n", getDepthFormat(st->begin[i]), st->begin[i]->name);
+        //if(st->begin[i]->cls==CLS_FUNC)
+            //listSymbols(&(st->begin[i]->args));
+        //if(st->begin[i]->cls==CLS_STRUCT)
+            //listSymbols(&(st->begin[i]->members));
+    }
+    return 1;
 }
 
 int consume(atomType code)
@@ -409,10 +451,18 @@ int expr()
 int stmCompound()
 {
     Token *tkStart = crtTk;
+    Symbol *start=symbolsTab->fill[-1];
     if (consume(LACC)) {
+        {
+            crtDepth++;
+        }
         while (declVar() || stm()) {
         };
         if(consume(RACC)){
+            {
+                crtDepth--;
+                deleteSymbolsAfter(symbolsTab, start);
+            }
             return 1;
         }else err(" stmCompound missing %s at line %d", atomNames[RACC], crtTk->line);
     }
@@ -750,5 +800,6 @@ int asint(Token * tokens)
         crtTk = tokens;
         sc = ruleUnit(tokens);
     }
+    listSymbols(symbolsTab);
     return sc;
 }
