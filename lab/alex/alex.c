@@ -24,12 +24,7 @@ void err(const char *fmt, ...) {
     vfprintf(stderr, fmt, va);
     fputc('\n', stderr);
     va_end(va);
-    Token *t=NULL;
-    printf("%s\n",t->info.text);
     exit(-1);
-}
-void tkerr(Token *tk,const char *fmt, ...){
-
 }
 
 Token *addTk(int code, int line) {

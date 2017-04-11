@@ -19,7 +19,7 @@ void initSymbols(Symbols * symbols) {
 Symbol *addSymbol(Symbols *symbols,const char * name, int cls) {
     Symbol *s;
     if (symbols->fill == symbols->end) { // create more room
-        int count = symbols->end - symbols->begin;
+        int count = symbols->end-symbols->begin;
         int n = count * 2; // double the room
         if (n == 0)
             n = 1; // needed for the initial case
@@ -73,15 +73,15 @@ void addVar(Token *tkName, Type t) {
     s->type = t;
 }
 
-int deleteSymbolsAfter(Symbols *st,Symbol *symbol){
-
-    int i,j,n;
-    n=st->fill-st->begin;
-    for(i=0;i<n;i++){
-        if(st->begin[i]==symbol){
-            for(j=n-1;i<i;j--){
+int deleteSymbolsAfter(Symbols *st, Symbol *symbol) {
+    int i, j, n;
+    n = st->fill - st->begin;
+    for (i = 0; i < n; i++) {
+        if (st->begin[i] == symbol) {
+            for (j = n - 1; j > i; j--) {
                 free(st->begin[j]);
             }
+            st->fill = st->begin + i + 1;
             return 1;
         }
     }
@@ -800,6 +800,9 @@ int asint(Token * tokens)
         crtTk = tokens;
         sc = ruleUnit(tokens);
     }
+#ifdef DEBUG
+    printf("\nSymbol table:\n");
     listSymbols(symbolsTab);
+#endif
     return sc;
 }
