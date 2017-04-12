@@ -53,6 +53,20 @@ typedef struct _Symbol
     };
 }Symbol;
 
+typedef union {
+    long
+    int i;              // int, char
+    double d;           // double
+    const char *str;    // char[]
+} CtVal;
+
+typedef struct {
+    Type type;          // type of the result
+    int isLVal;         // if it is a LVal
+    int isCtVal;        // if it is a constant value (int, real, char, char[])
+    CtVal ctVal;        // the constat value
+} RetVal;
+
 //Syntactic rules functions
 int ruleUnit();
 int declStruct();
@@ -64,21 +78,21 @@ int declFunc();
 int funcArg();
 int stm();
 int stmCompound();
-int expr();
-int exprAssign();
-int exprOr1();
-int exprAnd1();
-int exprEq1();
-int exprRel1();
-int exprAdd1();
-int exprMul1();
-int exprOr();
-int exprAnd();
-int exprEq();
-int exprRel();
-int exprAdd();
-int exprMul();
-int exprCast();
-int exprUnary();
-int exprPostfix();
-int exprPrimary();
+int expr(RetVal *rv);
+int exprAssign(RetVal *rv);
+int exprOr1(RetVal *rv);
+int exprAnd1(RetVal *rv);
+int exprEq1(RetVal *rv);
+int exprRel1(RetVal *rv);
+int exprAdd1(RetVal *rv);
+int exprMul1(RetVal *rv);
+int exprOr(RetVal *rv);
+int exprAnd(RetVal *rv);
+int exprEq(RetVal *rv);
+int exprRel(RetVal *rv);
+int exprAdd(RetVal *rv);
+int exprMul(RetVal *rv);
+int exprCast(RetVal *rv);
+int exprUnary(RetVal *rv);
+int exprPostfix(RetVal *rv);
+int exprPrimary(RetVal *rv);

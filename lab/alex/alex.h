@@ -4,8 +4,6 @@
 #define SAFEALLOC(var,Type) if((var=(Type*)malloc(sizeof(Type)))==NULL)err("not enough memory");
 #define SAFEALLOCSZ(var,Type,size) if((var=(Type*)malloc(sizeof(Type)*size))==NULL)err("not enough memory");
 
-void err(const char *fmt, ...);
-
 typedef union TokenInfo{
         char *text; // folosit pentru ID, CT_STRING (alocat dinamic)
         long int intnum; // folosit pentru CT_INT, CT_CHAR
@@ -83,5 +81,8 @@ typedef struct _Token{
 extern char *keyNames[NUM_KEYW];
 
 extern char *atomNames[NUM_ATOMS];
+
+void err(const char *fmt, ...);
+void tkerr(Token* tk, const char *fmt, ...);
 
 #endif

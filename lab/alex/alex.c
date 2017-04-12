@@ -27,6 +27,17 @@ void err(const char *fmt, ...) {
     exit(-1);
 }
 
+void tkerr(Token *tk, const char *fmt, ...){
+    va_list va;
+    va_start(va, fmt);
+    fprintf(stderr, "error: ");
+    vfprintf(stderr, fmt, va);
+    fprintf(stderr, "at line %d", tk->line);
+    fputc('\n', stderr);
+    va_end(va);
+    exit(-1);
+}
+
 Token *addTk(int code, int line) {
     Token *tk;
     SAFEALLOC(tk, Token)
