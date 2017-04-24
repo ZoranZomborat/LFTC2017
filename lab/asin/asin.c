@@ -222,25 +222,92 @@ int consume(atomType code)
 /*exprPrimary: ID ( LPAR ( expr ( COMMA expr )* )? RPAR )?
            | CT_INT | CT_REAL | CT_CHAR
            | CT_STRING | LPAR expr RPAR ;*/
-int exprPrimary(){
+int exprPrimary(RetVal *rv){
     Token *tkStart = crtTk;
-    RetVal *rv=(RetVal *)malloc(sizeof(RetVal));
+    Token *tkName;
+    Symbol *s;
+    Symbol **crtDefArg;
     RetVal arg;
     if(consume(ID)){
+        tkName = consumedTk;
+        {
+            s = findSymbol(&symbolsTab, tkName->info.text);
+            if (!s)
+                tkerr(crtTk, "undefined symbol %s", tkName->info.text);
+            rv->type = s->type;
+            rv->isCtVal = 0;
+            rv->isLVal = 1;
+        }
         if (consume(LPAR)) {
+            {
+                crtDefArg = s->args.begin;
+                if (s->cls != CLS_FUNC && s->cls != CLS_EXTFUNC)
+                    tkerr(crtTk, "call of the non-function %s", tkName->info.text);
+            }
             if ( expr(&arg)){
+                {
+                    if (crtDefArg == s->args.end)
+                        tkerr(crtTk, "too many arguments in call");
+                    cast(&(*crtDefArg)->type, &arg->type);
+                    crtDefArg++;
+                }
                 while (consume(COMMA) && expr(&arg)) {
+                    {
+                        if (crtDefArg == s->args.end)
+                            tkerr(crtTk, "too many arguments in call");
+                        cast(&(*crtDefArg)->type, &arg->type);
+                        crtDefArg++;
+                    }
                 };
             }
             if (consume(RPAR)) {
+                {
+                    if (crtDefArg != s->args.end)
+                        tkerr(crtTk, "too few arguments in call");
+                    rv->type = s->type;
+                    rv->isCtVal = rv->isLVal = 0;
+                }
                 return 1;
             } else{
                 err(" exprPrimary missing %s at line %d", atomNames[RPAR], crtTk->line);
             }
         }
         return 1;
-    } else if (consume(CT_INT) || consume(CT_REAL) ||
-            consume(CT_CHAR) || consume(CT_STRING)){
+    } else if (consume(CT_INT)){
+        Token *tki=consumedTk;
+        {
+            rv->type = createType(TB_INT, -1);
+            rv->ctVal.i = tki->info.intnum;
+            rv->isCtVal = 1;
+            rv->isLVal = 0;
+        }
+        return 1;
+    } else if (consume(CT_REAL)) {
+        Token *tkr=consumedTk;
+        {
+            rv->type = createType(TB_DOUBLE, -1);
+            rv->ctVal.d = tkr->info.floatnum;
+            rv->isCtVal = 1;
+            rv->isLVal = 0;
+        }
+        return 1;
+    } else if (consume(CT_CHAR)){
+        Token *tkc=consumedTk;
+        {
+            rv->type = createType(TB_CHAR, -1);
+            rv->ctVal.str = tkc->info.text;
+            rv->isCtVal = 1;
+            rv->isLVal = 0;
+        }
+        return 1;
+    } else if (consume(CT_STRING)){
+        Token *tks=consumedTk;
+        {
+            rv->type = createType(TB_CHAR, 0);
+            rv->ctVal.str = tks->info.text;
+            rv->isCtVal = 1;
+            rv->isLVal = 0;
+        }
         return 1;
     } else if (consume(LPAR)) {
         if (expr(rv)) {
@@ -258,13 +325,23 @@ int exprPrimary(){
 
 /*exprPostfix1: LBRACK expr RBRACK exprPostfix1
           | DOT ID exprPostfix1 | eps*/
-int exprPostfix1() {
+int exprPostfix1(RetVal *rv) {
     Token *tkStart = crtTk;
     RetVal rve;
     if (consume(LBRACK)) {
         if (expr(&rve)) {
+            {
+                if (rv->type.nElements < 0)
+                    tkerr(crtTk, "only an array can be indexed");
+                Type typeInt = createType(TB_INT, -1);
+                cast(&typeInt, &rve.type);
+                rv->type = rve->type;
+                rv->type.nElements = -1;
+                rv->isLVal = 1;
+                rv->isCtVal = 0;
+            }
             if (consume(RBRACK)) {
-                if (exprPostfix1()) {
+                if (exprPostfix1(rv)) {
                     return 1;
                 }
             } else err(" exprPostfix1 missing %s at line %d", atomNames[RBRACK], crtTk->line);
@@ -273,6 +350,17 @@ int exprPostfix1() {
     crtTk = tkStart;
     if (consume(DOT)) {
         if (consume(ID)) {
+            Token *tkName = consumedTk;
+            {
+                Symbol *sStruct = rv->type.s;
+                Symbol *sMember = findSymbol(&sStruct->members, tkName->info.text);
+                if (!sMember)
+                    tkerr(crtTk, "struct %s does not have a member %s",
+                            sStruct->name, tkName->info.text);
+                rv->type = sMember->type;
+                rv->isLVal = 1;
+                rv->isCtVal = 0;
+            }
             if (exprPostfix1()) {
                 return 1;
             }
@@ -283,10 +371,10 @@ int exprPostfix1() {
 }
 
 //exprPostfix: exprPrimary exprPostfix1;
-int exprPostfix(){
+int exprPostfix(RetVal *rv){
     Token *tkStart = crtTk;
-    if(exprPrimary()){
-       if(exprPostfix1()){
+    if(exprPrimary(rv)){
+       if(exprPostfix1(rv)){
            return 1;
        }
     }
@@ -733,8 +821,9 @@ int stm()
     } else if (consume(RETURN)){
         expr(&rv);
         {
-            if (rv2.type.typeBase == TB_STRUCT)
-                tkerr(crtTk, "a structure cannot be logically tested");
+            if(crtFunc->type.typeBase==TB_VOID)
+                tkerr(crtTk,"a void function cannot return a value");
+            cast(&crtFunc->type,&rv.type);
         }
         if(consume(SEMICOL)){
             return 1;
@@ -766,8 +855,7 @@ int arrayDecl(Type *type)
             if (rv.type.typeBase != TB_INT)
                 err("the array size is not an integer, at line %d", crtTk->line);
             type->nElements = rv.ctVal.i;
-        }
-        {
+        } else {
             type->nElements = 0;       // for now do not compute the real size
         }
         if(consume(RBRACK))

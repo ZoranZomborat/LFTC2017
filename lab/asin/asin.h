@@ -54,8 +54,7 @@ typedef struct _Symbol
 }Symbol;
 
 typedef union {
-    long
-    int i;              // int, char
+    long int i;              // int, char
     double d;           // double
     const char *str;    // char[]
 } CtVal;
