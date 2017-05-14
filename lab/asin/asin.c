@@ -142,16 +142,11 @@ void cast(Type * dst, Type * src) {
         case TB_INT:
         case TB_DOUBLE:
             return;
-        case TB_VOID:
-        case TB_STRUCT:
-            err("cannot convert struct to primitive???");
-            break;
         }
         break;
     case TB_STRUCT:
         if (dst->typeBase == TB_STRUCT) {
             if (src->s != dst->s)
-
                 err("a structure cannot be converted to another one, at line %d", crtTk->line);
             return;
         }
@@ -162,8 +157,11 @@ void cast(Type * dst, Type * src) {
     }
 }
 
-Type getArithType(Type *s1, Type *s2){
+Type getArithType(Type *s1, Type *s2) {
     Type t;
+    t.typeBase = ((s1->typeBase < s2->typeBase)?s1->typeBase:s2->typeBase);
+    t.s = s1->s;
+    t.nElements = s1->nElements;
     return t;
 }
 
@@ -231,7 +229,7 @@ int exprPrimary(RetVal *rv){
     if(consume(ID)){
         tkName = consumedTk;
         {
-            s = findSymbol(&symbolsTab, tkName->info.text);
+            s = findSymbol(symbolsTab, tkName->info.text);
             if (!s)
                 tkerr(crtTk, "undefined symbol %s", tkName->info.text);
             rv->type = s->type;
@@ -248,14 +246,14 @@ int exprPrimary(RetVal *rv){
                 {
                     if (crtDefArg == s->args.end)
                         tkerr(crtTk, "too many arguments in call");
-                    cast(&(*crtDefArg)->type, &arg->type);
+                    cast(&(*crtDefArg)->type, &(arg.type));
                     crtDefArg++;
                 }
                 while (consume(COMMA) && expr(&arg)) {
                     {
                         if (crtDefArg == s->args.end)
                             tkerr(crtTk, "too many arguments in call");
-                        cast(&(*crtDefArg)->type, &arg->type);
+                        cast(&(*crtDefArg)->type, &(arg.type));
                         crtDefArg++;
                     }
                 };
@@ -335,7 +333,7 @@ int exprPostfix1(RetVal *rv) {
                     tkerr(crtTk, "only an array can be indexed");
                 Type typeInt = createType(TB_INT, -1);
                 cast(&typeInt, &rve.type);
-                rv->type = rve->type;
+                //rv->type = rv.type;
                 rv->type.nElements = -1;
                 rv->isLVal = 1;
                 rv->isCtVal = 0;
@@ -355,13 +353,13 @@ int exprPostfix1(RetVal *rv) {
                 Symbol *sStruct = rv->type.s;
                 Symbol *sMember = findSymbol(&sStruct->members, tkName->info.text);
                 if (!sMember)
-                    tkerr(crtTk, "struct %s does not have a member %s",
+                    tkerr(crtTk, "struct %s does not have a member %s ",
                             sStruct->name, tkName->info.text);
                 rv->type = sMember->type;
                 rv->isLVal = 1;
                 rv->isCtVal = 0;
             }
-            if (exprPostfix1()) {
+            if (exprPostfix1(rv)) {
                 return 1;
             }
         } else err(" exprPostfix1 missing %s at line %d at line %d", atomNames[ID], crtTk->line, crtTk->line);
@@ -673,7 +671,7 @@ int exprUnary(RetVal *rv)
             }
             return 1;
         }
-    } else if(exprPostfix())
+    } else if(exprPostfix(rv))
     {
         return 1;
     }
@@ -759,6 +757,7 @@ int stm()
     Token *tkStart = crtTk;
     RetVal rv;
     RetVal rv1, rv2, rv3;
+
     if (stmCompound()) {
         return 1;
     } else if (consume(IF)) {

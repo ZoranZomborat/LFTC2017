@@ -32,7 +32,7 @@ void tkerr(Token *tk, const char *fmt, ...){
     va_start(va, fmt);
     fprintf(stderr, "error: ");
     vfprintf(stderr, fmt, va);
-    fprintf(stderr, "at line %d", tk->line);
+    fprintf(stderr, " at line %d", tk->line);
     fputc('\n', stderr);
     va_end(va);
     exit(-1);

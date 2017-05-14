@@ -7,8 +7,8 @@ typedef struct _Symbols Symbols;
 typedef struct _Type Type;
 
 typedef enum {
-    TB_INT = 0,
-    TB_DOUBLE,
+    TB_DOUBLE = 0,
+    TB_INT,
     TB_CHAR,
     TB_STRUCT,
     TB_VOID
