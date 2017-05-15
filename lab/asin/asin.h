@@ -46,10 +46,13 @@ typedef struct _Symbol
     MEMtype mem;
     Type type;
     int depth; // 0-global, 1-in function, 2...N-nested blocks in function
-    union
-    {
+    union {
         Symbols args; // used only for functions
-        Symbols members;// used only for structs
+        Symbols members; // used only for structs
+    };
+    union {
+        void *addr; // vm: the memory address for global symbols
+        int offset; // vm: the stack offset for local symbols
     };
 }Symbol;
 
@@ -95,3 +98,7 @@ int exprCast(RetVal *rv);
 int exprUnary(RetVal *rv);
 int exprPostfix(RetVal *rv);
 int exprPrimary(RetVal *rv);
+
+//core functions
+Symbol *requireSymbol(Symbols *symbols, const char *name);
+Symbol *requireSymbol(Symbols *symbols, const char *name);

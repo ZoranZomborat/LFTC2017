@@ -5,7 +5,7 @@
 
 static Token *consumedTk;
 static Token *crtTk;
-static Symbols *symbolsTab;
+Symbols *symbolsTab;
 static Symbol *crtFunc;
 static Symbol *crtStruct;
 static int crtDepth=0;
@@ -36,6 +36,14 @@ Symbol *addSymbol(Symbols *symbols,const char * name, int cls) {
     s->name = name;
     s->cls = cls;
     s->depth = crtDepth;
+    return s;
+}
+
+Symbol *requireSymbol(Symbols *symbols, const char *name){
+    Symbol *s;
+    s=findSymbol(symbols, name);
+    if(s==NULL)
+        err("Could not find required symbol %s !", name);
     return s;
 }
 
@@ -165,10 +173,10 @@ Type getArithType(Type *s1, Type *s2) {
     return t;
 }
 
-Symbol *addExtFunc(const char * name, Type type) {
+Symbol *addExtFunc(const char * name, Type type, void *addr) {
     Symbol *s = addSymbol(symbolsTab, name, CLS_EXTFUNC);
     s->type = type;
-
+    s->addr = addr;
     initSymbols(&s->args);
     return s;
 }
@@ -182,28 +190,28 @@ Symbol *addFuncArg(Symbol *func, const char *name, Type type) {
 void manageExtFunctions() {
     Symbol *s;
     //void put_s(char s[])    Afiseaza sirul de caractere dat
-    s = addExtFunc("put_s", createType(TB_VOID, -1));
+    s = addExtFunc("put_s", createType(TB_VOID, -1), put_s);
     addFuncArg(s, "s", createType(TB_CHAR, 0));
     //void get_s(char s[])    Cere de la tastatura un sir de caractere si il depune in s
-    s = addExtFunc("get_s", createType(TB_VOID, -1));
+    s = addExtFunc("get_s", createType(TB_VOID, -1), get_s);
     addFuncArg(s, "s", createType(TB_CHAR, 0));
     //void put_i(int i)       Afiseaza intregul „i”
-    s = addExtFunc("put_i", createType(TB_VOID, -1));
+    s = addExtFunc("put_i", createType(TB_VOID, -1), put_i);
     addFuncArg(s, "i", createType(TB_INT, -1));
     //int get_i()             Cere de la tastatura un intreg
-    s = addExtFunc("get_i", createType(TB_INT, -1));
+    s = addExtFunc("get_i", createType(TB_INT, -1), get_i);
     //void put_d(double d)    Afiseaza nr real „d”
-    s = addExtFunc("put_d", createType(TB_VOID, -1));
+    s = addExtFunc("put_d", createType(TB_VOID, -1), put_d);
     addFuncArg(s, "d", createType(TB_DOUBLE, -1));
     //double get_d()          Cere de la tastatura un real
-    s = addExtFunc("get_d", createType(TB_DOUBLE, -1));
+    s = addExtFunc("get_d", createType(TB_DOUBLE, -1), get_d);
     //void put_c(char c)      Afiseaza nr real „c”
-    s = addExtFunc("put_c", createType(TB_VOID, -1));
+    s = addExtFunc("put_c", createType(TB_VOID, -1), put_c);
     addFuncArg(s, "c", createType(TB_CHAR, -1));
     //char get_c()            Cere de la tastatura un real
-    s = addExtFunc("get_c", createType(TB_CHAR, -1));
+    s = addExtFunc("get_c", createType(TB_CHAR, -1), get_c);
     //double seconds()        Returneaza un numar de secunde
-    s = addExtFunc("seconds", createType(TB_DOUBLE, -1));
+    s = addExtFunc("seconds", createType(TB_DOUBLE, -1), seconds);
 }
 
 int consume(atomType code)

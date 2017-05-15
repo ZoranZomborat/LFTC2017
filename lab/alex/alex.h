@@ -1,9 +1,6 @@
 #ifndef ALEX_H
 #define ALEX_H
 
-#define SAFEALLOC(var,Type) if((var=(Type*)malloc(sizeof(Type)))==NULL)err("not enough memory");
-#define SAFEALLOCSZ(var,Type,size) if((var=(Type*)malloc(sizeof(Type)*size))==NULL)err("not enough memory");
-
 typedef union TokenInfo{
         char *text; // folosit pentru ID, CT_STRING (alocat dinamic)
         long int intnum; // folosit pentru CT_INT, CT_CHAR

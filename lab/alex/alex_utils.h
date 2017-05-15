@@ -1,4 +1,7 @@
 
+#define SAFEALLOC(var,Type) if((var=(Type*)malloc(sizeof(Type)))==NULL)err("not enough memory");
+#define SAFEALLOCSZ(var,Type,size) if((var=(Type*)malloc(sizeof(Type)*size))==NULL)err("not enough memory");
+
 char *keyNames[NUM_KEYW]=
 {
         "break"     ,
