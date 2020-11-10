@@ -1,3 +1,6 @@
+#ifndef ALEX_H
+#define ALEX_H
+
 typedef union TokenInfo{
         char *text; // folosit pentru ID, CT_STRING (alocat dinamic)
         long int intnum; // folosit pentru CT_INT, CT_CHAR
@@ -10,14 +13,6 @@ typedef enum{
     TK_INT,
     TK_FLOAT
 }tokenInfoType;
-
-typedef struct _Token{
-	int code; // codul (numele)
-	tokenInfo info;
-	tokenInfoType infoType;
-	int line; // linia din fisierul de intrare
-	struct _Token *next; // inlantuire la urmatorul AL
-}Token;
 
 typedef enum{
     BREAK=0     ,
@@ -40,8 +35,26 @@ typedef enum{
     COMMA       ,
     SEMICOL     ,
     LPAR        ,
-    RPAR        ,    LBRACK      ,    RBRACK      ,    LACC        ,    RACC        ,    ADD         ,    SUB         ,    MUL         ,
-    DOT         ,    DIV         ,    AND         ,    OR          ,    NOT         ,    ASSIGN      ,    EQUAL       ,    NEQUAL      ,    LESS        ,    LESSEQ      ,    GRT         ,    GRTEQ       ,
+    RPAR        ,
+    LBRACK      ,
+    RBRACK      ,
+    LACC        ,
+    RACC        ,
+    ADD         ,
+    SUB         ,
+    MUL         ,
+    DOT         ,
+    DIV         ,
+    AND         ,
+    OR          ,
+    NOT         ,
+    ASSIGN      ,
+    EQUAL       ,
+    NEQUAL      ,
+    LESS        ,
+    LESSEQ      ,
+    GRT         ,
+    GRTEQ       ,
     END         ,
     NUM_ATOMS   ,
     FIRST_ATOM  = BREAK ,
@@ -51,65 +64,22 @@ typedef enum{
     NUM_KEYW    = (LAST_KEYW - FIRST_KEYW + 1),
     FIRST_SATOM = COMMA,
     LAST_SATOM  = DOT,
-    NUM_SATOMS  = LAST_SATOM-FIRST_SATOM} atomType;
+    NUM_SATOMS  = LAST_SATOM-FIRST_SATOM
+} atomType;
 
-char *keyNames[NUM_KEYW]={
-        "break"     ,
-        "char"      ,
-        "double"    ,
-        "else"      ,
-        "for"       ,
-        "if"        ,
-        "int"       ,
-        "return"    ,
-        "struct"    ,
-        "void"      ,
-        "while"
-};
+typedef struct _Token{
+    atomType code; // codul (numele)
+	tokenInfo info;
+	tokenInfoType infoType;
+	int line; // linia din fisierul de intrare
+	struct _Token *next; // inlantuire la urmatorul AL
+}Token;
 
-char *atomNames[NUM_ATOMS]={
-        "BREAK"     ,
-        "CHAR"      ,
-        "DOUBLE"    ,
-        "ELSE"      ,
-        "FOR"       ,
-        "IF"        ,
-        "INT"       ,
-        "RETURN"    ,
-        "STRUCT"    ,
-        "VOID"      ,
-        "WHILE"     ,
-        "CT_INT"    ,
-        "CT_REAL"   ,
-        "ID"        ,
-        "ESC"       ,
-        "CT_CHAR"   ,
-        "CT_STRING" ,
-        "COMMA"     ,
-        "SEMICOL"   ,
-        "LPAR"      ,
-        "RPAR"      ,
-        "LBRACK"    ,
-        "RBRACK"    ,
-        "LACC"      ,
-        "RACC"      ,
-        "ADD"       ,
-        "SUB"       ,
-        "MUL"       ,
-        "DOT"       ,
-        "DIV"       ,
-        "AND"       ,
-        "OR"        ,
-        "NOT"       ,
-        "ASSIGN"    ,
-        "EQUAL"     ,
-        "NEQUAL"    ,
-        "LESS"      ,
-        "LESSEQ"    ,
-        "GRT"       ,
-        "GRTEQ"     ,
-        "END"
-};
+extern char *keyNames[NUM_KEYW];
 
+extern char *atomNames[NUM_ATOMS];
 
+void err(const char *fmt, ...);
+void tkerr(Token* tk, const char *fmt, ...);
 
+#endif

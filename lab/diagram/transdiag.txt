@@ -1,0 +1,146 @@
+digraph {
+	ratio="fill";
+	size="16.5,11.7!";
+
+
+	0 -> 1 [label="1-9",weight="0.4"];
+	0 -> 2 [label="0",weight="0.4"];
+	2 -> 3 [label="X",weight="0.2"];
+	3 -> 4 [label="0-F",weight="0.2"];
+	4 -> 4 [label="0-F",weight="0.2"];
+	4 -> 4 ;
+	4 -> 10 ;//CT_INT
+	2 -> 5 [label="0-7",weight="0.2"];
+	5 -> 5 [label="0-7",weight="0.2"];
+	5 -> 10 ;//CT_INT
+	2 -> 7 [label="8-9",weight="0.2"];
+	7 -> 7 [label="0-9",weight="0.2"];
+	5 -> 7 [label="8-9",weight="0.2"];
+	1 -> 1 [label="0-9",weight="0.4"];
+	1 -> 10; //CT_INT
+	2 -> 10; //CT_INT
+
+	1 -> 11 [label="eE",weight="0.2"];
+	1 -> 9 [label=".",weight="0.2"];
+	2 -> 11 [label="eE",weight="0.2"];
+	2 -> 9 [label=".",weight="0.2"];
+	7 -> 11 [label="eE",weight="0.2"];
+	7 -> 9 [label=".",weight="0.2"];
+
+	//EXP
+	11 -> 12 [label="-+",weight="0.2"];
+	11 -> 12 ;
+	12 -> 13 [label="0-9",weight="0.2"];
+	13 -> 13 [label="0-9",weight="0.2"];
+	9 -> 14 [label="0-9",weight="0.2"];
+	14 -> 14 [label="0-9",weight="0.2"];
+	14 -> 11 [label="eE",weight="0.2"];
+	14 -> 15 ;//CT_REAL
+	13 -> 15 ;//CT_REAL
+
+	0 -> 16 [label="a-zA-Z_",weight="0.2"];
+	16 -> 16 [label="a-zA-Z0-9_",weight="0.2"];
+	16 -> 17 ; //ID
+
+	0 -> 21 [label="'", weight="0.2"];
+	21 -> 18 [label="[\\]" , weight="0.2"];
+	21 -> 23 [label="[^'\\]",weight="0.2"];
+	23 -> 25 ;
+	25 -> 26 [label="'",weight="0.2"];//CT_CHAR
+
+	0 -> 22 [label="\"",weight="0.2"];
+	22 -> 18 [label="[\\]",weight="0.2"];
+	22 -> 24 [label="[^\"\\]",weight="0.2"];
+	24 -> 25 ;
+	25 -> 24 [label="[^\"\\]",weight="0.2"];
+	25 -> 18 [label="[\\]",weight="0.2"];
+	25 -> 27 [label="\"",weight="0.2"];//CT_STRING
+	22 -> 27 ;//CT_STRING
+
+	//fragment ESC
+	18 -> 19 [label="[\\]",weight="0.2"];
+	19 -> 20 [label="abfnrtv'?\"\\\\0",weight="0.2"];
+	20 -> 25 ;
+
+	//Delimitators
+	0 -> 28 [label=",",weight="0.2"]; //COMMA
+	0 -> 29 [label=";",weight="0.2"]; //SEMICOL
+	0 -> 30 [label="(",weight="0.2"]; //LPAR
+	0 -> 31 [label=")",weight="0.2"]; //RPAR
+	0 -> 32 [label="[",weight="0.2"]; //LBRACK
+	0 -> 33 [label="]",weight="0.2"]; //RBRACK
+	0 -> 34 [label="{",weight="0.2"]; //LACC
+	0 -> 35 [label="}",weight="0.2"]; //RACC
+
+	//Operators
+	0 -> 36 [label="+",weight="0.2"]; 	//ADD
+	0 -> 37 [label="-",weight="0.2"]; 	//SUB
+	0 -> 38 [label="*",weight="0.2"]; 	//MUL
+	0 -> 39 [label="/",weight="0.2"]; 	//DIV
+	39 -> 57;							
+	0 -> 40 [label=".",weight="0.2"]; 	//DOT
+	0 -> 41 [label="&",weight="0.2"]; 
+	41 -> 42 [label="&",weight="0.2"]; 	//AND
+	0 -> 43 [label="|",weight="0.2"]; 
+	43 -> 44 [label="|",weight="0.2"]; 	//OR
+	0 -> 45 [label="!",weight="0.2"]; 	
+	45 -> 46 ;							//NOT
+	0 -> 47 [label="=",weight="0.2"];
+	47 -> 48 ; 							//ASSING
+	47 -> 49 [label="=",weight="0.2"]; 	//EQ
+	45 -> 50 [label="=",weight="0.2"];	//NEQ
+	0 -> 51 [label="<",weight="0.2"];
+	51 -> 52 ;							//LESS
+	51 -> 53 [label="=",weight="0.2"];	//LESSEQ
+	0 -> 54 [label=">",weight="0.2"];
+	54 -> 55 ;							//GRT
+	54 -> 56 [label="=",weight="0.2"];	//GRTEQ
+
+	//Comments
+	0 -> 58 [label="\\n\\r\\t",weight="0.2"]; //SPACE
+	58 -> 0;
+	39 -> 59 [label="[\\]",weight="0.2"];
+	59 -> 59 [label="^\n\r\0",weight="0.2"];  //LINECOMM
+	59 -> 0;
+	39 -> 60 [label="*",weight="0.2"];
+	60 -> 60 [label="^*",weight="0.2"];
+	60 -> 61 [label="*",weight="0.2"];
+	61 -> 61 [label="*",weight="0.2"];
+	61 -> 60 [label="^*/",weight="0.2"];
+	61 -> 62 [label="/",weight="0.2"];		  //COMMENT
+	62 -> 0;
+
+	10 [label="CT_INT",peripheries=2,color=red];		//CT_INT
+	11 [label="EXP",peripheries=1,color=blue];			//EXP
+	15 [label="CT_REAL",peripheries=2,color=red];		//CT_REAL
+	17 [label="ID",peripheries=2,color=red];			//ID
+	18 [label="ESC",peripheries=1,color=blue];			//ESC
+	26 [label="CT_CHAR",peripheries=2,color=red];		//CT_CHAR
+	27 [label="CT_STRING",peripheries=2,color=red];		//CT_STRING
+	28 [label="COMMA",peripheries=2,color=red];			//COMMA
+	29 [label="SEMICOL",peripheries=2,color=red];		//SEMICOL
+	30 [label="LPAR",peripheries=2,color=red];			//LPAR
+	31 [label="RPAR",peripheries=2,color=red];			//RPAR
+	32 [label="LBRACK",peripheries=2,color=red];		//LBRACK
+	33 [label="RBRACK",peripheries=2,color=red];		//RBRACK
+	34 [label="LACC",peripheries=2,color=red];			//LACC
+	35 [label="RACC",peripheries=2,color=red];			//RACC
+	36 [label="ADD",peripheries=2,color=red];			//ADD
+	37 [label="SUB",peripheries=2,color=red];			//SUB
+	38 [label="MUL",peripheries=2,color=red];			//MUL
+	57 [label="DIV",peripheries=2,color=red];			//DIV
+	40 [label="DOT",peripheries=2,color=red];			//DOT
+	42 [label="AND",peripheries=2,color=red];			//AND
+	44 [label="OR",peripheries=2,color=red];			//OR
+	46 [label="NOT",peripheries=2,color=red];			//NOT
+	48 [label="ASSING",peripheries=2,color=red];		//ASSING
+	49 [label="EQ",peripheries=2,color=red];			//EQ
+	50 [label="NEQ",peripheries=2,color=red];			//NEQ
+	52 [label="LESS",peripheries=2,color=red];			//LESS
+	53 [label="LESSEQ",peripheries=2,color=red];		//LESSEQ
+	55 [label="GRT",peripheries=2,color=red];			//GRT
+	56 [label="GRTEQ",peripheries=2,color=red];			//GRTEQ
+	58 [label="SPACE",color=blue];						//SPACE
+	59 [label="LNCOMM",color=blue];						//LNCOMM
+	62 [label="COMMENT",color=blue];					//COMMENT
+}
